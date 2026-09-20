@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { resolve } from 'node:path';
-import { validateFile, validateRepository } from '../lib/validator.mjs';
+import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
 
 const [command = 'validate', ...args] = process.argv.slice(2);
@@ -16,6 +16,10 @@ function flags(values) {
   return result;
 }
 
+function wantsAll(values) {
+  return values.length === 0 || values.includes('--all') || Boolean(flags(values).root);
+}
+
 async function outputRecord(record, output, kind) {
   if (output) {
     await writeJson(resolve(output), record);
@@ -28,11 +32,18 @@ async function outputRecord(record, output, kind) {
 
 try {
   if (command === 'validate') {
-    if (args.length === 0 || args[0] === '--all') {
-      const records = await validateRepository();
+    if (wantsAll(args)) {
+      const options = flags(args);
+      if (options.root === undefined && args.includes('--root')) {
+        throw new Error('Usage: orbit validate --all --root <directory>');
+      }
+      const records = options.root
+        ? await validateRecordRoot(resolve(options.root))
+        : await validateRepository();
       console.log(`Validated ${records.length} ORBIT records.`);
     } else {
       for (const file of args) {
+        if (file.startsWith('--')) continue;
         await validateFile(resolve(file));
         console.log(`Validated ${file}.`);
       }

@@ -30,11 +30,16 @@ The portable CLI exposes the same operations to any harness:
 
 ```sh
 npx orbit validate --all
+npx orbit validate --all --root docs/orbit
 npx orbit plan examples/plan-minimal.json
 npx orbit snapshot examples/project-snapshot-minimal.json
 npx orbit reconcile examples/reconciliation-minimal.json
 npx orbit slice examples/slice-minimal.json
 ```
+
+`orbit validate --all` validates the package fixture set (`examples/` and `orbit/`).
+
+`orbit validate --all --root <directory>` validates only the record directories under that root (`plans/`, `snapshots/`, `reconciliations/`, `slices/`). It does not read the package fixtures. Harness adapters that store project records outside this repository must pass `--root`.
 
 Harness adapters should call these commands and preserve their exit status. They must not replace ORBIT validation with harness-specific rules.
 
