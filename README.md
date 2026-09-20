@@ -24,7 +24,19 @@ npm install
 npm test
 ```
 
-The validator checks every example against its schema and verifies the cross-record references in the complete example set.
+The validator checks every example and every record under `orbit/` against its JSON Schema and verifies the cross-record references in the complete fixture set.
+
+The portable CLI exposes the same operations to any harness:
+
+```sh
+npx orbit validate --all
+npx orbit plan examples/plan-minimal.json
+npx orbit snapshot examples/project-snapshot-minimal.json
+npx orbit reconcile examples/reconciliation-minimal.json
+npx orbit slice examples/slice-minimal.json
+```
+
+Harness adapters should call these commands and preserve their exit status. They must not replace ORBIT validation with harness-specific rules.
 
 ## Scope
 

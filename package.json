@@ -9,9 +9,15 @@
     "url": "https://github.com/me2resh/orbit-spec.git"
   },
   "type": "module",
-  "scripts": {
-    "validate": "node scripts/validate-examples.mjs",
-    "test": "npm run validate"
+  "bin": {
+    "orbit": "bin/orbit.js"
   },
-  "devDependencies": {}
+  "scripts": {
+    "validate": "node bin/orbit.js validate --all",
+    "test": "npm run validate && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
 }
