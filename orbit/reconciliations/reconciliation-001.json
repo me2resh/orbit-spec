@@ -1,0 +1,37 @@
+{
+  "specVersion": "0.1",
+  "id": "reconciliation-001",
+  "planId": "plan-orbit-spec-core",
+  "planRevision": 1,
+  "projectSnapshotId": "snapshot-agent-sdlc-site-2026-09-20",
+  "reconciledAt": "2026-09-20T12:05:00Z",
+  "observations": [
+    { "id": "obs-schemas", "text": "The existing site repository contains four ORBIT schemas and eight JSON examples." },
+    { "id": "obs-validator", "text": "The existing validation script checks schemas and cross-record references but is coupled to the site repository layout." },
+    { "id": "obs-skills", "text": "The existing source does not yet contain a standalone ORBIT skill package." }
+  ],
+  "criterionAssessments": [
+    {
+      "criterionId": "ac-source",
+      "status": "partially-verified",
+      "evidence": [
+        { "kind": "repository", "repositoryId": "agent-sdlc-site", "commit": "4572f00380919375d3c4be537b3a8dd7aec56346", "path": "apps/site/src/data/orbit" }
+      ],
+      "explanation": "The source artefacts exist in the website repository and are being copied into this standard repository. A standalone specification document remains to be written."
+    },
+    {
+      "criterionId": "ac-validation",
+      "status": "partially-verified",
+      "evidence": [
+        { "kind": "repository", "repositoryId": "agent-sdlc-site", "commit": "4572f00380919375d3c4be537b3a8dd7aec56346", "path": "scripts/validate-orbit-examples.mjs" }
+      ],
+      "explanation": "The copied validator provides the first bounded validation slice. CI wiring and package boundaries remain to be added."
+    },
+    {
+      "criterionId": "ac-skills",
+      "status": "not-verified",
+      "evidence": [],
+      "explanation": "No standalone ORBIT skills exist in the repository yet."
+    }
+  ]
+}

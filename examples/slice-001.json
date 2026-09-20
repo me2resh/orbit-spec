@@ -1,0 +1,18 @@
+{
+  "specVersion": "0.1",
+  "id": "slice-001",
+  "planId": "plan-sso",
+  "outcomeId": "sso",
+  "basedOn": {
+    "planRevision": 1,
+    "reconciliationId": "reconciliation-001",
+    "repositories": { "web": "81fee032" }
+  },
+  "objective": "Configure the existing provider for the corporate IdP.",
+  "why": "The reconciliation found the provider but not the IdP mapping.",
+  "contributesTo": ["ac-1"],
+  "scope": {
+    "include": ["IdP mapping", "login regression test"],
+    "exclude": ["provider replacement", "account migration"]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "specVersion": "0.1",
+  "id": "slice-001",
+  "planId": "plan-orbit-spec-core",
+  "outcomeId": "portable-standard",
+  "basedOn": {
+    "planRevision": 1,
+    "reconciliationId": "reconciliation-001",
+    "repositories": { "agent-sdlc-site": "4572f00380919375d3c4be537b3a8dd7aec56346" }
+  },
+  "objective": "Create the standalone ORBIT repository baseline with schemas, examples, licensing, and the first planning records.",
+  "why": "The reconciliation found that ORBIT artefacts exist only inside the website repository and are not yet independently consumable.",
+  "contributesTo": ["ac-source"],
+  "scope": {
+    "include": ["Four JSON Schemas", "Eight existing examples", "Repository license files", "Plan, Snapshot, Reconciliation, and Slice records"],
+    "exclude": ["Website extraction", "Final normative specification", "Agent skills", "Provider integrations"]
+  }
+}

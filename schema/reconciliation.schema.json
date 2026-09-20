@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbitspec.dev/schema/reconciliation/v0.1.json",
+  "title": "ORBIT Reconciliation",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "id",
+    "planId",
+    "planRevision",
+    "projectSnapshotId",
+    "reconciledAt",
+    "observations",
+    "criterionAssessments"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1",
+      "description": "ORBIT specification version."
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable Reconciliation identifier."
+    },
+    "planId": {
+      "type": "string",
+      "description": "Referenced Plan identifier."
+    },
+    "planRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Referenced Plan revision."
+    },
+    "projectSnapshotId": {
+      "type": "string",
+      "description": "Referenced ProjectSnapshot identifier."
+    },
+    "reconciledAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time at which the assessment was produced."
+    },
+    "observations": {
+      "type": "array",
+      "description": "Factual observations from the ProjectSnapshot."
+    },
+    "criterionAssessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "criterionId",
+          "status",
+          "evidence"
+        ],
+        "properties": {
+          "criterionId": {
+            "type": "string",
+            "description": "Referenced Acceptance Criterion identifier."
+          },
+          "status": {
+            "enum": [
+              "not-verified",
+              "partially-verified",
+              "achieved",
+              "contradicted"
+            ],
+            "description": "Assessment status."
+          },
+          "evidence": {
+            "type": "array",
+            "description": "Evidence supporting the assessment."
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Assessment explanation."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Assessments of canonical Acceptance Criteria."
+    },
+    "assumptionAssessments": {
+      "type": "array",
+      "description": "Assessments of Plan assumptions."
+    },
+    "discoveries": {
+      "type": "array",
+      "description": "Planning-relevant discoveries."
+    }
+  },
+  "additionalProperties": false
+}

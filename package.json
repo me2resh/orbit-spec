@@ -1,0 +1,11 @@
+{
+  "name": "orbit-spec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-examples.mjs",
+    "test": "npm run validate"
+  },
+  "devDependencies": {}
+}
