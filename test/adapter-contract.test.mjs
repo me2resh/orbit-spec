@@ -40,3 +40,23 @@ test('cross-record validation rejects a missing snapshot reference', () => {
     { kind: 'reconciliation', value: { id: 'reconciliation-1', planId: 'plan-1', planRevision: 1, projectSnapshotId: 'missing' } }
   ]), /missing project snapshot/);
 });
+
+test('cross-record validation rejects missing reconciliations and stale plan revisions', () => {
+  const plan = { kind: 'plan', value: { id: 'plan-1', revision: 2 } };
+  assert.throws(() => validateReferences([
+    plan,
+    { kind: 'slice', value: { id: 'slice-1', planId: 'plan-1', basedOn: { planRevision: 2, reconciliationId: 'missing' } } }
+  ]), /missing reconciliation/);
+  assert.throws(() => validateReferences([
+    plan,
+    { kind: 'reconciliation', value: { id: 'reconciliation-1', planId: 'plan-1', planRevision: 1, projectSnapshotId: 'snapshot-1' } },
+    { kind: 'snapshot', value: { id: 'snapshot-1' } }
+  ]), /does not reference the plan revision/);
+});
+
+test('cross-record validation rejects duplicate IDs within a record set', () => {
+  assert.throws(() => validateReferences([
+    { kind: 'plan', value: { id: 'plan-1', revision: 1 } },
+    { kind: 'plan', value: { id: 'plan-1', revision: 1 } }
+  ]), /duplicate plan record id/);
+});
