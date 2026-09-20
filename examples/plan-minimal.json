@@ -1,0 +1,10 @@
+{
+  "specVersion": "0.1",
+  "id": "plan-minimal",
+  "revision": 1,
+  "project": { "id": "example-project" },
+  "title": "Example plan",
+  "intent": "Describe one durable planning intent.",
+  "outcomes": [],
+  "acceptanceCriteria": []
+}

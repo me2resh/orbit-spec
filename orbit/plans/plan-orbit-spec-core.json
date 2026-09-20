@@ -1,0 +1,18 @@
+{
+  "specVersion": "0.1",
+  "id": "plan-orbit-spec-core",
+  "revision": 1,
+  "project": { "id": "orbit-spec" },
+  "title": "Standalone ORBIT standard repository",
+  "intent": "Move the ORBIT specification, schemas, examples, validator, and skills into an independent repository while the website remains in agent-sdlc-site.",
+  "outcomes": [
+    { "id": "portable-standard", "title": "The ORBIT standard has one portable source repository." },
+    { "id": "validated-records", "title": "ORBIT records and cross-record invariants are validated in CI." },
+    { "id": "adoption-skills", "title": "Agents can create, reconcile, and validate ORBIT records through repository skills." }
+  ],
+  "acceptanceCriteria": [
+    { "id": "ac-source", "outcomeId": "portable-standard", "statement": "The repository contains the specification, four schemas, examples, and licensing terms." },
+    { "id": "ac-validation", "outcomeId": "validated-records", "statement": "A local validator checks every example against its schema and checks cross-record references." },
+    { "id": "ac-skills", "outcomeId": "adoption-skills", "statement": "The first skills create a Plan and validate an Orbit record without requiring the website repository." }
+  ]
+}

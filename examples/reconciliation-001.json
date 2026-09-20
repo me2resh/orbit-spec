@@ -1,0 +1,26 @@
+{
+  "specVersion": "0.1",
+  "id": "reconciliation-001",
+  "planId": "plan-sso",
+  "planRevision": 1,
+  "projectSnapshotId": "snapshot-2026-09-14",
+  "reconciledAt": "2026-09-14T16:05:00Z",
+  "observations": [
+    { "id": "obs-1", "text": "An existing OAuth provider is configured." }
+  ],
+  "criterionAssessments": [
+    {
+      "criterionId": "ac-1",
+      "status": "partially-verified",
+      "evidence": [
+        {
+          "kind": "repository",
+          "repositoryId": "web",
+          "commit": "81fee032",
+          "path": "src/auth/provider.ts"
+        }
+      ],
+      "explanation": "The provider exists, but corporate IdP mapping is missing."
+    }
+  ]
+}

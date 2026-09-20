@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbitspec.dev/schema/project-snapshot/v0.1.json",
+  "title": "ORBIT Project Snapshot",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "id",
+    "project",
+    "observedAt",
+    "repositories"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1",
+      "description": "ORBIT specification version."
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable ProjectSnapshot identifier."
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable project identifier."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Project identity whose state was observed."
+    },
+    "observedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time at which project state was observed."
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "repositoryId",
+          "branch",
+          "commit"
+        ],
+        "properties": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Stable repository identifier."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Observed branch."
+          },
+          "commit": {
+            "type": "string",
+            "minLength": 7,
+            "description": "Observed repository revision."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Observed repository states."
+    }
+  },
+  "additionalProperties": false
+}

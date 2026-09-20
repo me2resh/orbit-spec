@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbitspec.dev/schema/plan/v0.1.json",
+  "title": "ORBIT Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specVersion",
+    "id",
+    "revision",
+    "project",
+    "title",
+    "intent",
+    "outcomes",
+    "acceptanceCriteria"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1",
+      "description": "ORBIT specification version."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable Plan identifier."
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Plan revision number."
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable project identifier."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Project identity associated with the Plan."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable Plan title."
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Durable planning intent."
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable Outcome identifier."
+          },
+          "title": {
+            "type": "string",
+            "description": "Outcome title."
+          },
+          "intent": {
+            "type": "string",
+            "description": "Outcome intent."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Desired outcomes within the Plan."
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "outcomeId",
+          "statement"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable Acceptance Criterion identifier."
+          },
+          "outcomeId": {
+            "type": "string",
+            "description": "Outcome assessed by the criterion."
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical acceptance-criterion wording."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Stable checks for desired outcomes."
+    }
+  }
+}

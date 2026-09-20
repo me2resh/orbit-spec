@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbitspec.dev/schema/execution-slice/v0.1.json",
+  "title": "ORBIT Execution Slice",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "id",
+    "planId",
+    "outcomeId",
+    "basedOn",
+    "objective",
+    "why",
+    "contributesTo",
+    "scope"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "0.1",
+      "description": "ORBIT specification version."
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable ExecutionSlice identifier."
+    },
+    "planId": {
+      "type": "string",
+      "description": "Referenced Plan identifier."
+    },
+    "outcomeId": {
+      "type": "string",
+      "description": "Referenced Outcome identifier."
+    },
+    "basedOn": {
+      "type": "object",
+      "required": [
+        "planRevision",
+        "reconciliationId",
+        "repositories"
+      ],
+      "properties": {
+        "planRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Plan revision used for reconciliation."
+        },
+        "reconciliationId": {
+          "type": "string",
+          "description": "Reconciliation that justified the slice."
+        },
+        "repositories": {
+          "type": "object",
+          "description": "Repository revisions used as evidence."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Provenance for the slice."
+    },
+    "objective": {
+      "type": "string",
+      "description": "Bounded change objective."
+    },
+    "why": {
+      "type": "string",
+      "description": "Reason the change is justified."
+    },
+    "contributesTo": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Acceptance Criteria advanced by the slice."
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "include",
+        "exclude"
+      ],
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Included work."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Excluded work."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit change boundary."
+    }
+  },
+  "additionalProperties": false
+}

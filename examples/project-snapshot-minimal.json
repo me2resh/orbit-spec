@@ -1,0 +1,7 @@
+{
+  "specVersion": "0.1",
+  "id": "snapshot-minimal",
+  "project": { "id": "example-project" },
+  "observedAt": "2026-09-14T16:00:00Z",
+  "repositories": []
+}
