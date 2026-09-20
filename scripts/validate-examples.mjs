@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const readJson = file => JSON.parse(readFileSync(join(root, file), 'utf8'));
 const schemaRoot = 'schema';
 const exampleRoot = 'examples';
