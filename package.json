@@ -1,12 +1,16 @@
 {
   "name": "orbit-spec",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "author": "me2resh",
   "homepage": "https://orbitspec.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/me2resh/orbit-spec.git"
+  },
+  "files": ["bin", "lib", "schema", "README.md", "LICENSE", "LICENSE-CODE"],
+  "publishConfig": {
+    "access": "public"
   },
   "type": "module",
   "bin": {
