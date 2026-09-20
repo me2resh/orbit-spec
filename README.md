@@ -2,7 +2,7 @@
 
 ORBIT is a portable planning and reconciliation standard for durable software intent, current project reality, and the next bounded execution change.
 
-ORBIT is part of [Agent SDLC](https://agentsdlc.ai). The project is authored and maintained by [me2resh](https://github.com/me2resh). Visit the project website at [orbitspec.dev](https://orbitspec.dev).
+ORBIT is part of [Agent SDLC](https://agentsdlc.ai). Visit the project website at [orbitspec.dev](https://orbitspec.dev).
 
 This repository is the source for the standard, its schemas, examples, validators, and skills. The website is published separately so the standard can be used without a website or a specific coding harness.
 
@@ -33,3 +33,7 @@ ORBIT does not require a specific agent, issue tracker, branch strategy, reposit
 ## Licensing
 
 Specification and documentation are licensed under [CC BY 4.0](LICENSE). Code, scripts, and skills are licensed under [MIT](LICENSE-CODE).
+
+## Contributors
+
+<a href="https://github.com/me2resh" title="me2resh"><img src="https://github.com/me2resh.png?size=100" width="64" height="64" alt="me2resh"></a>
