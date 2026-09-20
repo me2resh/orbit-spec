@@ -2,6 +2,12 @@
   "name": "orbit-spec",
   "version": "0.1.0",
   "private": true,
+  "author": "me2resh",
+  "homepage": "https://orbitspec.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/me2resh/orbit-spec.git"
+  },
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-examples.mjs",
