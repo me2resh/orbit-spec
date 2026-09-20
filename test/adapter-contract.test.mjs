@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { validateReferences } from '../lib/validator.mjs';
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -31,4 +32,11 @@ test('generic adapter contract validates the complete repository', async () => {
   const result = await run('validate', ['--all']);
   assert.equal(result.code, 0, result.stderr);
   assert.match(result.stdout, /Validated \d+ ORBIT records/);
+});
+
+test('cross-record validation rejects a missing snapshot reference', () => {
+  assert.throws(() => validateReferences([
+    { kind: 'plan', value: { id: 'plan-1', revision: 1 } },
+    { kind: 'reconciliation', value: { id: 'reconciliation-1', planId: 'plan-1', planRevision: 1, projectSnapshotId: 'missing' } }
+  ]), /missing project snapshot/);
 });
