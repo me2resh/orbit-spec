@@ -1,12 +1,32 @@
 {
   "name": "orbit-spec",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "author": "me2resh",
   "homepage": "https://orbitspec.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/me2resh/orbit-spec.git"
+    "url": "git+https://github.com/me2resh/orbit-spec.git"
+  },
+  "main": "./lib/validator.mjs",
+  "exports": {
+    ".": "./lib/validator.mjs",
+    "./lifecycle": "./lib/lifecycle.mjs",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "files": [
+    "bin",
+    "lib",
+    "schema",
+    "examples",
+    "orbit",
+    "README.md",
+    "LICENSE",
+    "LICENSE-CODE"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "type": "module",
   "bin": {
@@ -19,5 +39,17 @@
   "dependencies": {
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
+  },
+  "description": "ORBIT is a portable planning and reconciliation standard for durable software intent, current project reality, and the next bounded execution change.",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "lib": "lib",
+    "test": "test"
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/me2resh/orbit-spec/issues"
   }
 }

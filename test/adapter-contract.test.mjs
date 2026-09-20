@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { validateReferences } from '../lib/validator.mjs';
+import { buildReconciliation, buildSlice } from '../lib/lifecycle.mjs';
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -59,4 +60,15 @@ test('cross-record validation rejects duplicate IDs within a record set', () => 
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } },
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } }
   ]), /duplicate plan record id/);
+});
+
+test('lifecycle builders preserve plan and reconciliation provenance', () => {
+  const plan = { id: 'plan-1', revision: 3, acceptanceCriteria: [{ id: 'ac-1' }] };
+  const snapshot = { id: 'snapshot-1', repositories: [{ repositoryId: 'app', commit: 'abcdef1' }] };
+  const reconciliation = buildReconciliation(plan, snapshot, { id: 'reconciliation-1' });
+  assert.equal(reconciliation.planRevision, 3);
+  assert.equal(reconciliation.criterionAssessments[0].status, 'not-verified');
+  const slice = buildSlice(plan, reconciliation, { id: 'slice-1', outcomeId: 'outcome-1', objective: 'Bounded change', why: 'Evidence supports it' });
+  assert.equal(slice.basedOn.reconciliationId, 'reconciliation-1');
+  assert.equal(slice.basedOn.planRevision, 3);
 });
