@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { validateRecordRoot, validateReferences } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice } from '../lib/lifecycle.mjs';
 
@@ -85,6 +85,21 @@ function writeProjectRoot(overrides = {}) {
   return rootDir;
 }
 
+function createGitRepository(rootDir, name, content) {
+  const repositoryPath = join(rootDir, name);
+  mkdirSync(repositoryPath);
+  execFileSync('git', ['init', '-b', 'main', repositoryPath], { stdio: 'ignore' });
+  execFileSync('git', ['-C', repositoryPath, 'config', 'user.email', 'orbit-tests@example.invalid']);
+  execFileSync('git', ['-C', repositoryPath, 'config', 'user.name', 'ORBIT Tests']);
+  writeFileSync(join(repositoryPath, 'README.md'), `${content}\n`);
+  execFileSync('git', ['-C', repositoryPath, 'add', 'README.md']);
+  execFileSync('git', ['-C', repositoryPath, 'commit', '-m', `test: initialise ${name}`], { stdio: 'ignore' });
+  return {
+    repositoryPath,
+    commit: execFileSync('git', ['-C', repositoryPath, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  };
+}
+
 test('adapter contract: every standard operation validates its fixture', async () => {
   const cases = [
     ['plan', 'examples/plan-minimal.json'],
@@ -95,6 +110,71 @@ test('adapter contract: every standard operation validates its fixture', async (
   for (const [command, file] of cases) {
     const result = await run(command, [file]);
     assert.equal(result.code, 0, `${command}: ${result.stderr}`);
+  }
+});
+
+test('snapshot preserves one-repository usage and captures two repositories in one valid record', async () => {
+  const rootDir = mkdtempSync(join(tmpdir(), 'orbit-snapshot-'));
+  try {
+    const web = createGitRepository(rootDir, 'web', 'Web repository');
+    const api = createGitRepository(rootDir, 'api', 'API repository');
+    const singleOutput = join(rootDir, 'single-snapshot.json');
+    const singleResult = await run('snapshot', [
+      '--project', 'single-repository-project',
+      '--repository', 'web', '--path', web.repositoryPath,
+      '--output', singleOutput
+    ]);
+    assert.equal(singleResult.code, 0, singleResult.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(singleOutput, 'utf8')).repositories, [
+      { repositoryId: 'web', branch: 'main', commit: web.commit }
+    ]);
+    const output = join(rootDir, 'snapshot.json');
+    const result = await run('snapshot', [
+      '--project', 'multi-repository-project',
+      '--repository', 'web', '--path', web.repositoryPath,
+      '--repository', 'api', '--path', api.repositoryPath,
+      '--output', output
+    ]);
+    assert.equal(result.code, 0, result.stderr);
+    const snapshot = JSON.parse(readFileSync(output, 'utf8'));
+    assert.deepEqual(snapshot.repositories, [
+      { repositoryId: 'web', branch: 'main', commit: web.commit },
+      { repositoryId: 'api', branch: 'main', commit: api.commit }
+    ]);
+  } finally {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('snapshot writes no output for duplicate identifiers or repository failures', async () => {
+  const rootDir = mkdtempSync(join(tmpdir(), 'orbit-snapshot-failure-'));
+  try {
+    const web = createGitRepository(rootDir, 'web', 'Web repository');
+    const output = join(rootDir, 'snapshot.json');
+    const cases = [
+      ['--repository', 'web', '--path', web.repositoryPath, '--repository', 'web', '--path', web.repositoryPath],
+      ['--repository', 'web', '--path', web.repositoryPath, '--repository', 'api', '--path', join(rootDir, 'missing')]
+    ];
+    for (const repositoryArguments of cases) {
+      const result = await run('snapshot', [
+        '--project', 'multi-repository-project',
+        ...repositoryArguments,
+        '--output', output
+      ]);
+      assert.equal(result.code, 1);
+      assert.equal(existsSync(output), false);
+    }
+    for (const option of ['--id', '--output']) {
+      const result = await run('snapshot', [
+        '--project', 'multi-repository-project',
+        '--repository', 'web', '--path', web.repositoryPath,
+        option
+      ]);
+      assert.equal(result.code, 1, option);
+      assert.match(result.stderr, /Usage: orbit snapshot/);
+    }
+  } finally {
+    rmSync(rootDir, { recursive: true, force: true });
   }
 });
 

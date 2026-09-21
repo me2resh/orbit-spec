@@ -47,6 +47,10 @@ The lifecycle commands also create records from explicit inputs:
 
 ```sh
 npx orbit snapshot --project my-project --repository app --path . --output snapshot.json
+npx orbit snapshot --project my-project \
+  --repository web --path ../web \
+  --repository api --path ../api \
+  --output project-snapshot.json
 npx orbit reconcile --plan plan.json --snapshot snapshot.json --output reconciliation.json
 npx orbit slice --plan plan.json --reconciliation reconciliation.json \
   --outcome outcome-id --objective "Bounded change" --why "Evidence supports this change" \
