@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
-import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
+import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
 
 const [command = 'validate', ...args] = process.argv.slice(2);
@@ -20,6 +20,16 @@ function flags(values) {
 
 function hasTextOption(options, key) {
   return typeof options[key] === 'string' && options[key].length > 0;
+}
+
+function optionValues(values, key) {
+  const matches = [];
+  for (let index = 0; index < values.length; index += 1) {
+    if (values[index] !== `--${key}`) continue;
+    const next = values[index + 1];
+    matches.push(!next || next.startsWith('--') ? true : next);
+  }
+  return matches;
 }
 
 function wantsAll(values) {
@@ -67,8 +77,20 @@ try {
       await outputRecord(record, options.output, 'plan');
     } else if (command === 'snapshot') {
       const options = flags(args);
-      if (!options.project || !options.repository || !options.path) throw new Error('Usage: orbit snapshot --project <id> --repository <id> --path <git-repo> [--id <id>] [--output <file>]');
-      const record = await captureSnapshot({ projectId: options.project, repositoryId: options.repository, repositoryPath: resolve(options.path), id: options.id ?? `snapshot-${options.project}` });
+      const repositoryIds = optionValues(args, 'repository');
+      const repositoryPaths = optionValues(args, 'path');
+      const hasInvalidOptions = ['id', 'output'].some(key => options[key] !== undefined && !hasTextOption(options, key));
+      const hasInvalidRepositories = repositoryIds.length === 0
+        || repositoryIds.length !== repositoryPaths.length
+        || [...repositoryIds, ...repositoryPaths].some(value => typeof value !== 'string');
+      if (!hasTextOption(options, 'project') || hasInvalidOptions || hasInvalidRepositories) {
+        throw new Error('Usage: orbit snapshot --project <id> --repository <id> --path <git-repo> [--repository <id> --path <git-repo> ...] [--id <id>] [--output <file>]');
+      }
+      const repositories = repositoryIds.map((repositoryId, index) => ({
+        repositoryId,
+        repositoryPath: resolve(repositoryPaths[index])
+      }));
+      const record = await captureProjectSnapshot({ projectId: options.project, repositories, id: options.id ?? `snapshot-${options.project}` });
       await outputRecord(record, options.output, 'snapshot');
     } else if (command === 'reconcile') {
       const options = flags(args);
