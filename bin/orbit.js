@@ -18,6 +18,10 @@ function flags(values) {
   return result;
 }
 
+function hasTextOption(options, key) {
+  return typeof options[key] === 'string' && options[key].length > 0;
+}
+
 function wantsAll(values) {
   return values.length === 0 || values.includes('--all') || Boolean(flags(values).root);
 }
@@ -89,7 +93,12 @@ try {
     }
   } else if (command === 'sync' && args[0] === 'github') {
     const options = flags(args.slice(1));
-    if (!options.plan || !options.snapshot || !options.reconciliation || !options.slice || !options.repo) {
+    const required = ['plan', 'snapshot', 'reconciliation', 'slice', 'repo'];
+    const valued = ['issue', 'project-owner', 'project-number'];
+    const hasInvalidOption = required.some(key => !hasTextOption(options, key))
+      || valued.some(key => options[key] !== undefined && !hasTextOption(options, key))
+      || (options['dry-run'] !== undefined && options['dry-run'] !== true);
+    if (hasInvalidOption) {
       throw new Error('Usage: orbit sync github --plan <file> --snapshot <file> --reconciliation <file> --slice <file> --repo <owner/name> [--project-owner <owner> --project-number <number>] [--issue <number>] [--dry-run]');
     }
     const plan = await readJson(resolve(options.plan));

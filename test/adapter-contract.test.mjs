@@ -188,6 +188,22 @@ test('validate --all --root rejects plan revision mismatches', async () => {
   }
 });
 
+test('sync github rejects valueless options before reading records or calling GitHub', async () => {
+  const required = [
+    'github',
+    '--plan', 'examples/plan-sso.json',
+    '--snapshot', 'examples/project-snapshot-2026-09-14.json',
+    '--reconciliation', 'examples/reconciliation-001.json',
+    '--slice', 'examples/slice-001.json',
+    '--repo', 'me2resh/demo'
+  ];
+  for (const option of ['--issue', '--project-number', '--project-owner']) {
+    const result = await run('sync', [...required, option]);
+    assert.equal(result.code, 1, option);
+    assert.match(result.stderr, /Usage: orbit sync github/);
+  }
+});
+
 test('cross-record validation rejects a missing snapshot reference', () => {
   assert.throws(() => validateReferences([
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } },
