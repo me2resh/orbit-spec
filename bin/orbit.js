@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
+import { syncGitHub } from '../lib/github-sync.mjs';
 
 const [command = 'validate', ...args] = process.argv.slice(2);
 
@@ -11,9 +12,14 @@ function flags(values) {
     const value = values[index];
     if (!value.startsWith('--')) continue;
     const key = value.slice(2);
-    result[key] = values[index + 1]?.startsWith('--') ? true : values[++index];
+    const next = values[index + 1];
+    result[key] = !next || next.startsWith('--') ? true : values[++index];
   }
   return result;
+}
+
+function hasTextOption(options, key) {
+  return typeof options[key] === 'string' && options[key].length > 0;
 }
 
 function wantsAll(values) {
@@ -85,8 +91,38 @@ try {
     } else {
       throw new Error(`Usage: orbit ${command} <record.json>`);
     }
+  } else if (command === 'sync' && args[0] === 'github') {
+    const options = flags(args.slice(1));
+    const required = ['plan', 'snapshot', 'reconciliation', 'slice', 'repo'];
+    const valued = ['issue', 'project-owner', 'project-number'];
+    const hasInvalidOption = required.some(key => !hasTextOption(options, key))
+      || valued.some(key => options[key] !== undefined && !hasTextOption(options, key))
+      || (options['dry-run'] !== undefined && options['dry-run'] !== true);
+    if (hasInvalidOption) {
+      throw new Error('Usage: orbit sync github --plan <file> --snapshot <file> --reconciliation <file> --slice <file> --repo <owner/name> [--project-owner <owner> --project-number <number>] [--issue <number>] [--dry-run]');
+    }
+    const plan = await readJson(resolve(options.plan));
+    const snapshot = await readJson(resolve(options.snapshot));
+    const slice = await readJson(resolve(options.slice));
+    const reconciliation = await readJson(resolve(options.reconciliation));
+    await validateFile(resolve(options.plan), 'plan');
+    await validateFile(resolve(options.snapshot), 'snapshot');
+    await validateFile(resolve(options.slice), 'slice');
+    await validateFile(resolve(options.reconciliation), 'reconciliation');
+    const result = await syncGitHub({
+      plan,
+      snapshot,
+      reconciliation,
+      slice,
+      repo: options.repo,
+      projectOwner: options['project-owner'],
+      projectNumber: options['project-number'],
+      issueNumber: options.issue,
+      dryRun: Boolean(options['dry-run'])
+    });
+    console.log(JSON.stringify(result, null, 2));
   } else {
-    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice> [path or options]');
+    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice|sync github> [path or options]');
   }
 } catch (error) {
   console.error(`ORBIT validation failed: ${error.message}`);

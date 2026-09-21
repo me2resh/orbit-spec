@@ -53,7 +53,19 @@ npx orbit slice --plan plan.json --reconciliation reconciliation.json \
   --output slice.json
 ```
 
-The CLI does not infer intent or change external systems. Harnesses provide the inputs and apply their own workflow rules.
+Before a provider write, validate and preview the complete record chain:
+
+```sh
+npx orbit sync github \
+  --plan examples/plan-sso.json \
+  --snapshot examples/project-snapshot-2026-09-14.json \
+  --reconciliation examples/reconciliation-001.json \
+  --slice examples/slice-001.json \
+  --repo owner/repository \
+  --dry-run
+```
+
+The GitHub adapter rejects inconsistent projects, Plan revisions, outcomes, acceptance criteria, incomplete Reconciliation assessments, and repository provenance before it calls GitHub. Remove `--dry-run` only after you review the proposed issue. The CLI does not infer intent. Harnesses provide explicit inputs and apply their own workflow rules.
 
 ## Scope
 
