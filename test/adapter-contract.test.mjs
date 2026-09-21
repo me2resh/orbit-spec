@@ -26,7 +26,7 @@ const minimalPlan = {
   project: { id: 'example-project' },
   title: 'Example plan',
   intent: 'Describe one durable planning intent.',
-  outcomes: [],
+  outcomes: [{ id: 'outcome-pending', title: 'One bounded example outcome.' }],
   acceptanceCriteria: []
 };
 
@@ -213,6 +213,80 @@ test('cross-record validation rejects duplicate IDs within a record set', () => 
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } },
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } }
   ]), /duplicate plan record id/);
+});
+
+test('cross-record validation rejects duplicate outcomes, criteria, and orphan criteria', () => {
+  const base = { kind: 'plan', value: minimalPlan };
+  assert.throws(() => validateReferences([{
+    ...base,
+    value: { ...minimalPlan, outcomes: [...minimalPlan.outcomes, minimalPlan.outcomes[0]] }
+  }]), /duplicate outcome id/);
+  const criterion = { id: 'ac-1', outcomeId: 'outcome-pending', statement: 'One check.' };
+  assert.throws(() => validateReferences([{
+    ...base,
+    value: { ...minimalPlan, acceptanceCriteria: [criterion, criterion] }
+  }]), /duplicate acceptance criterion id/);
+  assert.throws(() => validateReferences([{
+    ...base,
+    value: { ...minimalPlan, acceptanceCriteria: [{ ...criterion, outcomeId: 'missing' }] }
+  }]), /references missing outcome/);
+});
+
+test('cross-record validation rejects project and assessment membership mismatches', () => {
+  const criterion = { id: 'ac-1', outcomeId: 'outcome-pending', statement: 'One check.' };
+  const plan = { ...minimalPlan, acceptanceCriteria: [criterion] };
+  const snapshot = { ...minimalSnapshot, project: { id: 'other-project' } };
+  assert.throws(() => validateReferences([
+    { kind: 'plan', value: plan },
+    { kind: 'snapshot', value: snapshot },
+    { kind: 'reconciliation', value: { ...minimalReconciliation, criterionAssessments: [] } }
+  ]), /links plan project/);
+  const validSnapshot = { ...minimalSnapshot };
+  for (const criterionAssessments of [
+    [],
+    [{ criterionId: 'missing', status: 'not-verified', evidence: [] }],
+    [
+      { criterionId: 'ac-1', status: 'not-verified', evidence: [] },
+      { criterionId: 'ac-1', status: 'not-verified', evidence: [] }
+    ]
+  ]) {
+    assert.throws(() => validateReferences([
+      { kind: 'plan', value: plan },
+      { kind: 'snapshot', value: validSnapshot },
+      { kind: 'reconciliation', value: { ...minimalReconciliation, criterionAssessments } }
+    ]), /missing assessments|unknown criterion|duplicate assessment/);
+  }
+});
+
+test('cross-record validation rejects Slice lineage and provenance mismatches', () => {
+  const criterion = { id: 'ac-1', outcomeId: 'outcome-pending', statement: 'One check.' };
+  const plan = { ...minimalPlan, acceptanceCriteria: [criterion] };
+  const snapshot = {
+    ...minimalSnapshot,
+    repositories: [{ repositoryId: 'app', branch: 'main', commit: 'abcdef1' }]
+  };
+  const reconciliation = {
+    ...minimalReconciliation,
+    criterionAssessments: [{ criterionId: 'ac-1', status: 'not-verified', evidence: [] }]
+  };
+  const records = (slice) => [
+    { kind: 'plan', value: plan },
+    { kind: 'snapshot', value: snapshot },
+    { kind: 'reconciliation', value: reconciliation },
+    { kind: 'slice', value: slice }
+  ];
+  assert.throws(() => validateReferences(records({ ...minimalSlice, outcomeId: 'missing' })), /unknown outcome/);
+  assert.throws(() => validateReferences(records({ ...minimalSlice, contributesTo: ['missing'] })), /unknown criterion/);
+  assert.throws(() => validateReferences(records({
+    ...minimalSlice,
+    contributesTo: ['ac-1'],
+    basedOn: { ...minimalSlice.basedOn, repositories: { app: 'stale00' } }
+  })), /stale commit/);
+  assert.throws(() => validateReferences(records({
+    ...minimalSlice,
+    contributesTo: ['ac-1'],
+    basedOn: { ...minimalSlice.basedOn, repositories: { other: 'abcdef1' } }
+  })), /outside its project snapshot/);
 });
 
 test('lifecycle builders preserve plan and reconciliation provenance', () => {

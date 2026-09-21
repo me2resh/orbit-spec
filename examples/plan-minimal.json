@@ -5,6 +5,11 @@
   "project": { "id": "example-project" },
   "title": "Example plan",
   "intent": "Describe one durable planning intent.",
-  "outcomes": [],
+  "outcomes": [
+    {
+      "id": "outcome-pending",
+      "title": "One bounded example outcome."
+    }
+  ],
   "acceptanceCriteria": []
 }

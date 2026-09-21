@@ -89,17 +89,20 @@ try {
     }
   } else if (command === 'sync' && args[0] === 'github') {
     const options = flags(args.slice(1));
-    if (!options.plan || !options.slice || !options.repo) {
-      throw new Error('Usage: orbit sync github --plan <file> --slice <file> --repo <owner/name> [--reconciliation <file>] [--project-owner <owner> --project-number <number>] [--issue <number>] [--dry-run]');
+    if (!options.plan || !options.snapshot || !options.reconciliation || !options.slice || !options.repo) {
+      throw new Error('Usage: orbit sync github --plan <file> --snapshot <file> --reconciliation <file> --slice <file> --repo <owner/name> [--project-owner <owner> --project-number <number>] [--issue <number>] [--dry-run]');
     }
     const plan = await readJson(resolve(options.plan));
+    const snapshot = await readJson(resolve(options.snapshot));
     const slice = await readJson(resolve(options.slice));
-    const reconciliation = options.reconciliation ? await readJson(resolve(options.reconciliation)) : undefined;
+    const reconciliation = await readJson(resolve(options.reconciliation));
     await validateFile(resolve(options.plan), 'plan');
+    await validateFile(resolve(options.snapshot), 'snapshot');
     await validateFile(resolve(options.slice), 'slice');
-    if (options.reconciliation) await validateFile(resolve(options.reconciliation), 'reconciliation');
+    await validateFile(resolve(options.reconciliation), 'reconciliation');
     const result = await syncGitHub({
       plan,
+      snapshot,
       reconciliation,
       slice,
       repo: options.repo,
