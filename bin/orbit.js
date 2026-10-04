@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { resolve } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
+import { buildProgress } from '../lib/progress.mjs';
 
 const [command = 'validate', ...args] = process.argv.slice(2);
 
@@ -91,6 +93,22 @@ try {
     } else {
       throw new Error(`Usage: orbit ${command} <record.json>`);
     }
+  } else if (command === 'progress') {
+    const options = flags(args);
+    const hasInvalidOption = !hasTextOption(options, 'root')
+      || ['plan', 'output', 'direction'].some(key => options[key] !== undefined && !hasTextOption(options, key));
+    if (hasInvalidOption) {
+      throw new Error('Usage: orbit progress --root <directory> [--plan <id>] [--output <file>] [--direction TD|LR]');
+    }
+    const markdown = await buildProgress({ recordRoot: resolve(options.root), planId: options.plan, direction: options.direction });
+    if (options.output) {
+      const output = resolve(options.output);
+      await mkdir(dirname(output), { recursive: true });
+      await writeFile(output, markdown);
+      console.log(`Wrote progress report to ${options.output}.`);
+    } else {
+      process.stdout.write(markdown);
+    }
   } else if (command === 'sync' && args[0] === 'github') {
     const options = flags(args.slice(1));
     const required = ['plan', 'snapshot', 'reconciliation', 'slice', 'repo'];
@@ -122,7 +140,7 @@ try {
     });
     console.log(JSON.stringify(result, null, 2));
   } else {
-    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice|sync github> [path or options]');
+    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice|progress|sync github> [path or options]');
   }
 } catch (error) {
   console.error(`ORBIT validation failed: ${error.message}`);
