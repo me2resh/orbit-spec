@@ -2,7 +2,7 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
-import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
+import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
 import { buildProgress } from '../lib/progress.mjs';
 
@@ -22,6 +22,16 @@ function flags(values) {
 
 function hasTextOption(options, key) {
   return typeof options[key] === 'string' && options[key].length > 0;
+}
+
+function optionValues(values, key) {
+  const matches = [];
+  for (let index = 0; index < values.length; index += 1) {
+    if (values[index] !== `--${key}`) continue;
+    const next = values[index + 1];
+    matches.push(!next || next.startsWith('--') ? true : next);
+  }
+  return matches;
 }
 
 function wantsAll(values) {
@@ -45,7 +55,14 @@ async function defaultId(prefix, directory, options, sources = []) {
       throw error;
     }
     for (const file of files.filter(file => file.endsWith('.json'))) {
-      ids.add((await readJson(join(path, file))).id);
+      // Best-effort scan: a file that is not an ORBIT record (a commented
+      // tsconfig.json, a file holding null) must not stop the command.
+      try {
+        const id = (await readJson(join(path, file)))?.id;
+        if (typeof id === 'string') ids.add(id);
+      } catch {
+        // Not readable as JSON; it cannot hold a colliding record ID.
+      }
     }
   }
   let id = base;
@@ -94,8 +111,20 @@ try {
       await outputRecord(record, options.output, 'plan');
     } else if (command === 'snapshot') {
       const options = flags(args);
-      if (!options.project || !options.repository || !options.path) throw new Error('Usage: orbit snapshot --project <id> --repository <id> --path <git-repo> [--id <id>] [--output <file>]');
-      const record = await captureSnapshot({ projectId: options.project, repositoryId: options.repository, repositoryPath: resolve(options.path), id: options.id ?? await defaultId(`snapshot-${options.project}`, 'snapshots', options) });
+      const repositoryIds = optionValues(args, 'repository');
+      const repositoryPaths = optionValues(args, 'path');
+      const hasInvalidOptions = ['id', 'output'].some(key => options[key] !== undefined && !hasTextOption(options, key));
+      const hasInvalidRepositories = repositoryIds.length === 0
+        || repositoryIds.length !== repositoryPaths.length
+        || [...repositoryIds, ...repositoryPaths].some(value => typeof value !== 'string');
+      if (!hasTextOption(options, 'project') || hasInvalidOptions || hasInvalidRepositories) {
+        throw new Error('Usage: orbit snapshot --project <id> --repository <id> --path <git-repo> [--repository <id> --path <git-repo> ...] [--id <id>] [--output <file>]');
+      }
+      const repositories = repositoryIds.map((repositoryId, index) => ({
+        repositoryId,
+        repositoryPath: resolve(repositoryPaths[index])
+      }));
+      const record = await captureProjectSnapshot({ projectId: options.project, repositories, id: options.id ?? await defaultId(`snapshot-${options.project}`, 'snapshots', options) });
       await outputRecord(record, options.output, 'snapshot');
     } else if (command === 'reconcile') {
       const options = flags(args);

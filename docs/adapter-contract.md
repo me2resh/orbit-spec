@@ -19,6 +19,22 @@ When an adapter stores ORBIT records for a managed project, it MUST pass `--root
 
 The adapter MUST return the CLI exit status. A non-zero status means that the record or repository is not conforming.
 
+## Project Snapshot capture
+
+An adapter MAY capture one project state with the lifecycle command:
+
+```sh
+orbit snapshot --project <id> \
+  --repository <id> --path <local-path> \
+  --repository <id> --path <local-path> \
+  --output <file>
+```
+
+The adapter MUST provide one stable identifier and one local path for each repository.
+The command records each repository branch and commit in one Project Snapshot.
+The command rejects duplicate identifiers before repository inspection.
+An inspection failure prevents the command from writing the output file.
+
 ## Harness independence
 
 An adapter MAY expose these operations as a skill, command, task, rule, or CI step. It MUST NOT change the ORBIT record shape or weaken schema validation.
