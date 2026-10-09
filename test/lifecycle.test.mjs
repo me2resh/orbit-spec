@@ -102,3 +102,13 @@ test('default IDs check records near inputs when output is printed to stdout', a
   const { stdout } = await run(['reconcile', '--plan', join(root, 'plans', 'plan-test.json'), '--snapshot', snapshot.file]);
   assert.equal(JSON.parse(stdout).id, `${reconciliation.record.id}-2`);
 });
+
+test('default IDs ignore JSON files that are not ORBIT records', async t => {
+  const { create, plan, root } = await setup(t);
+  // A commented tsconfig.json and a file holding null sit next to the records.
+  await writeFile(join(root, 'snapshots', 'tsconfig.json'), '{\n  // comment\n  "compilerOptions": {}\n}\n');
+  await writeFile(join(root, 'snapshots', 'empty.json'), 'null');
+  await writeFile(join(root, 'snapshots', 'numeric-id.json'), JSON.stringify({ id: 7 }));
+  const { record } = await create('snapshot', 1);
+  assert.equal(record.id, `snapshot-${plan.project.id}-20261004T093213Z`);
+});
