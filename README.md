@@ -147,6 +147,17 @@ Outcome progress: achieved = 1, partially-verified = 0.5, other = 0; averaged ov
 
 ORBIT does not require a specific agent, issue tracker, branch strategy, repository layout, storage system, or execution provider.
 
+## Claude Code plugin
+
+In Claude Code, add the marketplace and install the plugin:
+
+```
+/plugin marketplace add me2resh/apexyard
+/plugin install orbit@apexyard
+```
+
+The plugin runs the `orbit` CLI. Until the npm package is published, install the CLI with `npm install -g github:me2resh/orbit-spec#v0.1.0`. After publication, install it with `npm install -g orbit-spec`.
+
 ## Licensing
 
 Specification and documentation are licensed under [CC BY 4.0](LICENSE). Code, scripts, and skills are licensed under [MIT](LICENSE-CODE).
