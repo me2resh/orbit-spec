@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice, captureSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
@@ -26,6 +26,31 @@ function hasTextOption(options, key) {
 
 function wantsAll(values) {
   return values.length === 0 || values.includes('--all') || Boolean(flags(values).root);
+}
+
+async function defaultId(prefix, directory, options, sources = []) {
+  const base = `${prefix}-${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}`;
+  const directories = new Set([
+    resolve(directory), resolve('orbit', directory),
+    ...sources.flatMap(file => [dirname(resolve(file)), resolve(dirname(file), '..', directory)]),
+    ...(options.output ? [dirname(resolve(options.output))] : [])
+  ]);
+  const ids = new Set();
+  for (const path of directories) {
+    let files;
+    try {
+      files = await readdir(path);
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    for (const file of files.filter(file => file.endsWith('.json'))) {
+      ids.add((await readJson(join(path, file))).id);
+    }
+  }
+  let id = base;
+  for (let suffix = 2; ids.has(id); suffix += 1) id = `${base}-${suffix}`;
+  return id;
 }
 
 async function outputRecord(record, output, kind) {
@@ -70,7 +95,7 @@ try {
     } else if (command === 'snapshot') {
       const options = flags(args);
       if (!options.project || !options.repository || !options.path) throw new Error('Usage: orbit snapshot --project <id> --repository <id> --path <git-repo> [--id <id>] [--output <file>]');
-      const record = await captureSnapshot({ projectId: options.project, repositoryId: options.repository, repositoryPath: resolve(options.path), id: options.id ?? `snapshot-${options.project}` });
+      const record = await captureSnapshot({ projectId: options.project, repositoryId: options.repository, repositoryPath: resolve(options.path), id: options.id ?? await defaultId(`snapshot-${options.project}`, 'snapshots', options) });
       await outputRecord(record, options.output, 'snapshot');
     } else if (command === 'reconcile') {
       const options = flags(args);
@@ -79,7 +104,7 @@ try {
       const snapshot = await readJson(resolve(options.snapshot));
       await validateFile(resolve(options.plan), 'plan');
       await validateFile(resolve(options.snapshot), 'snapshot');
-      const record = buildReconciliation(plan, snapshot, { id: options.id ?? `reconciliation-${plan.id}` });
+      const record = buildReconciliation(plan, snapshot, { id: options.id ?? await defaultId(`reconciliation-${plan.id}`, 'reconciliations', options, [options.plan, options.snapshot]) });
       await outputRecord(record, options.output, 'reconciliation');
     } else if (command === 'slice') {
       const options = flags(args);
@@ -88,7 +113,7 @@ try {
       const reconciliation = await readJson(resolve(options.reconciliation));
       await validateFile(resolve(options.plan), 'plan');
       await validateFile(resolve(options.reconciliation), 'reconciliation');
-      const record = buildSlice(plan, reconciliation, { id: options.id ?? `slice-${plan.id}`, outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
+      const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
       await outputRecord(record, options.output, 'slice');
     } else {
       throw new Error(`Usage: orbit ${command} <record.json>`);
