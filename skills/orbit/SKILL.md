@@ -5,7 +5,7 @@ description: Use when creating or updating ORBIT plans, snapshots, reconciliatio
 
 # ORBIT
 
-Run the `orbit` CLI for one project. This skill works in any git repository. Store that project's records under `orbit/` at the project root. Do not look for records anywhere else.
+Run the `orbit` CLI for one project. This skill works in any git repository. Store that project's records under `orbit/` at the project root. Do not look for records anywhere else. Run every `orbit` command from the project root, because the paths below are relative to it.
 
 ## 1. Check that `orbit` is installed
 
@@ -88,7 +88,7 @@ orbit plan --input <file> [--output <file>]
 
 `--input` is required for the copy form. `--output` is optional; without it the command prints the JSON and does not write a file.
 
-Write `orbit/plans/plan-<id>.json` with only these fields. `specVersion` is the string `0.1`. `revision` is an integer greater than or equal to 1. `project` is an object with an `id` string. `outcomes` is an array of objects with `id` and `title` (`intent` on an outcome is optional). `acceptanceCriteria` is an array of objects with `id`, `outcomeId`, and `statement`. Do not add other properties.
+Write `orbit/plans/plan-<id>.json` with only these eight fields, all required. `specVersion` is the string `0.1`. `id` is a non-empty string, the Plan id. `revision` is an integer greater than or equal to 1. `project` is an object with an `id` string. `title` is a non-empty string. `intent` is a non-empty string that states the durable planning intent. `outcomes` is an array of objects with `id` and `title` (`intent` on an outcome is optional). `acceptanceCriteria` is an array of objects with `id`, `outcomeId`, and `statement`. Do not add other properties.
 
 Then run `orbit validate --all --root orbit`.
 
