@@ -311,6 +311,40 @@ test('cross-record validation rejects duplicate IDs within a record set', () => 
   ]), /duplicate plan record id/);
 });
 
+test('cross-record validation keeps two revisions of one Plan, each with its own chain', () => {
+  const revisedPlan = { ...minimalPlan, revision: 2, title: 'Example plan, revised' };
+  const reconciliationV2 = { ...minimalReconciliation, id: 'reconciliation-v2', planRevision: 2 };
+  const sliceV2 = {
+    ...minimalSlice,
+    id: 'slice-v2',
+    basedOn: { ...minimalSlice.basedOn, planRevision: 2, reconciliationId: 'reconciliation-v2' }
+  };
+  assert.doesNotThrow(() => validateReferences([
+    { kind: 'plan', value: minimalPlan },
+    { kind: 'plan', value: revisedPlan },
+    { kind: 'snapshot', value: minimalSnapshot },
+    { kind: 'reconciliation', value: minimalReconciliation },
+    { kind: 'reconciliation', value: reconciliationV2 },
+    { kind: 'slice', value: minimalSlice },
+    { kind: 'slice', value: sliceV2 }
+  ]));
+});
+
+test('cross-record validation rejects a Slice paired with another revision reconciliation', () => {
+  const revisedPlan = { ...minimalPlan, revision: 2 };
+  const crossedSlice = {
+    ...minimalSlice,
+    basedOn: { ...minimalSlice.basedOn, planRevision: 2 }
+  };
+  assert.throws(() => validateReferences([
+    { kind: 'plan', value: minimalPlan },
+    { kind: 'plan', value: revisedPlan },
+    { kind: 'snapshot', value: minimalSnapshot },
+    { kind: 'reconciliation', value: minimalReconciliation },
+    { kind: 'slice', value: crossedSlice }
+  ]), /another plan or revision/);
+});
+
 test('cross-record validation rejects duplicate outcomes, criteria, and orphan criteria', () => {
   const base = { kind: 'plan', value: minimalPlan };
   assert.throws(() => validateReferences([{
