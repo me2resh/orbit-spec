@@ -29,6 +29,11 @@
       "minimum": 1,
       "description": "Plan revision number."
     },
+    "revisionNote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Why this Plan revision exists. Name the changed criteria and the evidence for the change."
+    },
     "project": {
       "type": "object",
       "required": [

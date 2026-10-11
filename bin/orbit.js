@@ -5,6 +5,7 @@ import { validateFile, validateRecordRoot, validateRepository } from '../lib/val
 import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, snapshotRepositoryCommits, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
 import { buildProgress } from '../lib/progress.mjs';
+import { buildStatus, renderStatus } from '../lib/status.mjs';
 
 const [command = 'validate', ...args] = process.argv.slice(2);
 
@@ -214,6 +215,22 @@ try {
     } else {
       process.stdout.write(markdown);
     }
+  } else if (command === 'status') {
+    const options = flags(args);
+    const repositoryIds = optionValues(args, 'repository');
+    const repositoryPaths = optionValues(args, 'path');
+    const hasInvalidOption = !hasTextOption(options, 'root')
+      || (options.plan !== undefined && !hasTextOption(options, 'plan'))
+      || (options.json !== undefined && options.json !== true)
+      || repositoryIds.length !== repositoryPaths.length
+      || [...repositoryIds, ...repositoryPaths].some(value => typeof value !== 'string')
+      || new Set(repositoryIds).size !== repositoryIds.length;
+    if (hasInvalidOption) {
+      throw new Error('Usage: orbit status --root <directory> [--plan <id>] [--repository <id> --path <git-repo> ...] [--json]');
+    }
+    const paths = Object.fromEntries(repositoryIds.map((id, index) => [id, resolve(repositoryPaths[index])]));
+    const status = await buildStatus({ recordRoot: resolve(options.root), planId: options.plan, repositoryPaths: paths });
+    process.stdout.write(options.json ? `${JSON.stringify(status, null, 2)}\n` : renderStatus(status));
   } else if (command === 'sync' && args[0] === 'github') {
     const options = flags(args.slice(1));
     const required = ['plan', 'snapshot', 'reconciliation', 'slice', 'repo'];
@@ -245,7 +262,7 @@ try {
     });
     console.log(JSON.stringify(result, null, 2));
   } else {
-    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice|progress|sync github> [path or options]');
+    throw new Error('Usage: orbit <validate|plan|snapshot|reconcile|slice|progress|status|sync github> [path or options]');
   }
 } catch (error) {
   console.error(`ORBIT validation failed: ${error.message}`);
