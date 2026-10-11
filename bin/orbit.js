@@ -85,7 +85,7 @@ async function defaultId(prefix, directory, options, sources = []) {
 // Resolve the Project Snapshot that a Reconciliation names. An explicit
 // --snapshot file wins; otherwise search snapshots/ under --root, next to the
 // Reconciliation's record directory, and under the working directory.
-async function resolveSliceSnapshot(reconciliation, options) {
+async function resolveSliceSnapshot(reconciliation, options, projectId) {
   const snapshotId = reconciliation.projectSnapshotId;
   if (hasTextOption(options, 'snapshot')) {
     await validateFile(resolve(options.snapshot), 'snapshot');
@@ -102,17 +102,17 @@ async function resolveSliceSnapshot(reconciliation, options) {
     resolve('snapshots'), resolve('orbit', 'snapshots')
   ];
   const match = (await scanRecords(directories))
-    .find(({ record }) => record.id === snapshotId && Array.isArray(record.repositories));
+    .find(({ record }) => record.id === snapshotId && record.project?.id === projectId && Array.isArray(record.repositories));
   if (!match) return undefined;
   await validateFile(match.file, 'snapshot');
   return match.record;
 }
 
-async function sliceRepositories(reconciliation, options, repositoryIds) {
+async function sliceRepositories(reconciliation, options, repositoryIds, projectId) {
   if (repositoryIds.some(value => typeof value !== 'string')) {
     throw new Error('Usage: orbit slice ... --repository <id> requires a repository ID.');
   }
-  const snapshot = await resolveSliceSnapshot(reconciliation, options);
+  const snapshot = await resolveSliceSnapshot(reconciliation, options, projectId);
   if (!snapshot) {
     if (repositoryIds.length > 0) throw new Error(`Project Snapshot ${reconciliation.projectSnapshotId} was not found; pass --snapshot <file> or --root <directory>.`);
     console.error(`ORBIT notice: Project Snapshot ${reconciliation.projectSnapshotId} was not found; basedOn.repositories is empty. Pass --snapshot <file> or --root <directory>.`);
@@ -188,12 +188,13 @@ try {
       await outputRecord(record, options.output, 'reconciliation');
     } else if (command === 'slice') {
       const options = flags(args);
-      if (!options.plan || !options.reconciliation || !options.outcome || !options.objective || !options.why) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <slug>] [--snapshot <file> | --root <directory>] [--repository <id> ...] [--output <file>]');
+      if (!options.plan || !options.reconciliation || !options.outcome || !options.objective || !options.why
+        || (options.snapshot !== undefined && !hasTextOption(options, 'snapshot'))) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <slug>] [--snapshot <file> | --root <directory>] [--repository <id> ...] [--output <file>]');
       const plan = await readJson(resolve(options.plan));
       const reconciliation = await readJson(resolve(options.reconciliation));
       await validateFile(resolve(options.plan), 'plan');
       await validateFile(resolve(options.reconciliation), 'reconciliation');
-      const repositories = await sliceRepositories(reconciliation, options, optionValues(args, 'repository'));
+      const repositories = await sliceRepositories(reconciliation, options, optionValues(args, 'repository'), plan.project.id);
       const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), repositories, outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
       await outputRecord(record, options.output, 'slice');
     } else {

@@ -37,6 +37,23 @@ The command records each repository branch and commit in one Project Snapshot.
 The command rejects duplicate identifiers before repository inspection.
 An inspection failure prevents the command from writing the output file.
 
+## Execution Slice provenance
+
+`orbit slice` fills `basedOn.repositories` with repository IDs and commits from the Project Snapshot named by the Reconciliation.
+The snapshot search matches both the snapshot ID and the Plan's project ID.
+An adapter MAY pass `--repository <id>` repeatedly to limit this map to named repositories.
+An unknown repository ID is an error.
+An adapter MAY pass `--snapshot <file>` to override the search.
+The supplied snapshot ID MUST match the Reconciliation's `projectSnapshotId`.
+Without an override, the command searches `snapshots/` under `--root`, beside the Reconciliation's record directory, and under the working directory.
+It also searches the Reconciliation's directory and `orbit/snapshots/` under the working directory.
+If no snapshot is found, the command prints a notice and leaves `basedOn.repositories` empty.
+Requesting repositories without a snapshot is an error.
+
+An adapter SHOULD pass `--id <slug>` to name each new record.
+Without `--id`, lifecycle commands generate a timestamp ID and print a fallback-ID notice.
+A same-second collision adds a numeric suffix and explains the choice in the notice.
+
 ## Harness independence
 
 An adapter MAY expose these operations as a skill, command, task, rule, or CI step. It MUST NOT change the ORBIT record shape or weaken schema validation.

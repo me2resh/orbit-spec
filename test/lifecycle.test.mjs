@@ -181,3 +181,29 @@ test('an explicit --id prints no fallback notice', async t => {
   const { stderr } = await run(sliceInputs(root, ['--id', 'slice-named']));
   assert.doesNotMatch(stderr, /timestamp ID/);
 });
+
+test('slice rejects a valueless --snapshot with a usage error', async t => {
+  const { run, root } = await twoRepositoryChain(t);
+  for (const extra of [['--snapshot'], ['--snapshot', '--id', 'slice-test']]) {
+    await assert.rejects(run(sliceInputs(root, extra)), error => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /ORBIT validation failed: Usage: orbit slice/);
+      assert.equal(error.stdout, '');
+      return true;
+    });
+  }
+});
+
+test('slice snapshot search matches the project when two projects share a snapshot ID', async t => {
+  const { run, root, snapshot } = await twoRepositoryChain(t);
+  const other = structuredClone(snapshot.record);
+  other.project.id = 'other-project';
+  other.repositories[0].commit = '9999999';
+  // The other project's snapshot sorts first in the same search directory.
+  await writeFile(join(root, 'snapshots', 'a-other-project.json'), JSON.stringify(other));
+  const { stdout } = await run(sliceInputs(root, ['--root', root, '--id', 'slice-project']));
+  assert.deepEqual(JSON.parse(stdout).basedOn.repositories, {
+    app: snapshot.record.repositories[0].commit,
+    web: 'abcdef1234567'
+  });
+});
