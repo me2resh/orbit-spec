@@ -49,7 +49,7 @@ A record root can also hold superseded records under `history/`, in the same fou
 - A current record can depend on a history record only through `basedOn` provenance on an Execution Slice. A delivered slice keeps the `basedOn` it was cut from.
 - A Plan `id` and `revision`, or any other record `id`, must be unique across `history/` and the current directories.
 
-`orbit progress` does not read `history/`. See [AgDR-0006](docs/agdr/AgDR-0006-validate-resolves-history.md).
+`orbit progress` does not read `history/`. See [AgDR-0009](docs/agdr/AgDR-0009-validate-resolves-history.md).
 
 Harness adapters should call these commands and preserve their exit status. They must not replace ORBIT validation with harness-specific rules.
 
