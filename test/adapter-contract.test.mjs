@@ -453,3 +453,43 @@ test('lifecycle builders preserve plan and reconciliation provenance', () => {
   assert.equal(slice.basedOn.reconciliationId, 'reconciliation-1');
   assert.equal(slice.basedOn.planRevision, 3);
 });
+
+test('a later Plan revision with revisionNote validates', async () => {
+  const rootDir = mkdtempSync(join(tmpdir(), 'orbit-revision-note-'));
+  try {
+    const plan = JSON.parse(readFileSync('examples/plan-minimal.json', 'utf8'));
+    plan.revision = 2;
+    plan.revisionNote = 'Revision 2 corrects the baseline of one criterion.';
+    const file = join(rootDir, 'plan-minimal.r2.json');
+    writeFileSync(file, `${JSON.stringify(plan, null, 2)}\n`);
+    const result = await run('plan', [file]);
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Validated plan record/);
+  } finally {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+for (const [name, prefix, message] of [
+  ['HTML comment', 'Owner <!-- hidden', /unclosed HTML comment/],
+  ['backtick fence', 'Owner\n```markdown\nhidden', /unclosed code fence/],
+  ['tilde fence', 'Owner\n~~~markdown\nhidden', /unclosed code fence/],
+  ['leading BOM', '\uFEFFOwner', /byte order mark U\+FEFF/]
+]) {
+  test(`sync github rejects prefix ${name} through both options`, async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'orbit-prefix-'));
+    try {
+      const file = join(rootDir, 'prefix.txt');
+      writeFileSync(file, `${prefix}\n`);
+      for (const extra of [['--body-prefix', prefix], ['--body-prefix-file', file]]) {
+        const result = await run('sync', [...syncFixtureArgs, ...extra]);
+        assert.equal(result.code, 1);
+        assert.match(result.stderr, /ORBIT validation failed: The body prefix/);
+        assert.match(result.stderr, message);
+        assert.equal(result.stdout, '');
+      }
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true });
+    }
+  });
+}

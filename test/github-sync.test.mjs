@@ -206,3 +206,26 @@ test('rejects an inconsistent record chain before any GitHub call when a prefix 
   }), /outcome/i);
   assert.equal(calls, 0);
 });
+
+test('accepts a prefix with a closed comment and closed fences', () => {
+  const bodyPrefix = 'Owner <!-- internal note -->\n```markdown\nExample\n```\n~~~\nAnother example\n~~~';
+  const generated = buildGitHubIssuePayload({ plan, reconciliation, slice }).body;
+  assert.equal(buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }).body,
+    `${bodyPrefix}\n\n${generated}`);
+});
+
+for (const [name, bodyPrefix, message] of [
+  ['comment', 'Owner <!-- hidden', /unclosed HTML comment/],
+  ['backticks', 'Owner\n````\nhidden\n```', /unclosed code fence/],
+  ['tildes', 'Owner\n~~~\nhidden\n```', /unclosed code fence/],
+  ['BOM', '\uFEFFOwner', /byte order mark U\+FEFF/]
+]) {
+  test(`rejects unsafe prefix ${name} before GitHub calls`, async () => {
+    let calls = 0;
+    await assert.rejects(syncGitHub({
+      plan, snapshot, reconciliation, slice, repo: 'me2resh/demo', bodyPrefix,
+      execCommand: async () => { calls += 1; return { stdout: '' }; }
+    }), message);
+    assert.equal(calls, 0);
+  });
+}

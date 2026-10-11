@@ -132,7 +132,8 @@ npx orbit sync github \
 - Use one of the two options. The command fails with a usage error when you give both options, or one option two times.
 - The adapter writes the prefix, one blank line, and then the generated body. The generated body does not change.
 - The dry-run preview, the create path, and the `--issue <number>` edit path send the same body.
-- The prefix is plain text. It cannot remove or change the generated sections.
+- The prefix leaves generated section text unchanged. Markdown or HTML in the prefix can affect the rendered view.
+- Prefixes must close HTML comments and code fences, and must not start with a byte order mark.
 
 The adapter validates the prefix and never changes it. It rejects a prefix with a clear error, before any GitHub call, when the prefix:
 
@@ -216,6 +217,8 @@ Outcome progress: achieved = 1, partially-verified = 0.5, other = 0; averaged ov
 ````
 
 ## Status
+
+`orbit status` needs git 2.24 or later because it passes `--end-of-options` to git.
 
 `orbit status --root <directory> [--plan <id>] [--repository <id> --path <git-repo> ...] [--json]` shows whether the latest Reconciliation is still current. It prints:
 
