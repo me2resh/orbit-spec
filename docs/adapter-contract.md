@@ -9,13 +9,15 @@ An adapter MUST expose these ORBIT operations:
 | Operation | CLI command | Input |
 |---|---|---|
 | Validate package fixtures | `orbit validate --all` | ORBIT repository checkout |
-| Validate a project record root | `orbit validate --all --root <directory>` | Directory with `plans/`, `snapshots/`, `reconciliations/`, and `slices/` |
+| Validate a project record root | `orbit validate --all --root <directory>` | Directory with `plans/`, `snapshots/`, `reconciliations/`, and `slices/`, and an optional `history/` directory with the same subdirectories |
 | Validate a Plan | `orbit plan <file>` | Plan JSON file |
 | Validate a Project Snapshot | `orbit snapshot <file>` | Project Snapshot JSON file |
 | Validate a Reconciliation | `orbit reconcile <file>` | Reconciliation JSON file |
 | Validate an Execution Slice | `orbit slice <file>` | Execution Slice JSON file |
 
 When an adapter stores ORBIT records for a managed project, it MUST pass `--root <project-record-root>`. The adapter MUST NOT rely on package fixture validation to stand in for project validation.
+
+An adapter that keeps superseded records MUST move them to `<project-record-root>/history/`. The adapter MUST NOT rewrite `basedOn` on a delivered Execution Slice to name a newer Plan revision or Reconciliation.
 
 The adapter MUST return the CLI exit status. A non-zero status means that the record or repository is not conforming.
 
