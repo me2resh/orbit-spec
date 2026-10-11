@@ -2,7 +2,7 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
-import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
+import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, snapshotRepositoryCommits, writeJson } from '../lib/lifecycle.mjs';
 import { syncGitHub } from '../lib/github-sync.mjs';
 import { buildProgress } from '../lib/progress.mjs';
 
@@ -38,36 +38,86 @@ function wantsAll(values) {
   return values.length === 0 || values.includes('--all') || Boolean(flags(values).root);
 }
 
-async function defaultId(prefix, directory, options, sources = []) {
-  const base = `${prefix}-${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}`;
-  const directories = new Set([
-    resolve(directory), resolve('orbit', directory),
-    ...sources.flatMap(file => [dirname(resolve(file)), resolve(dirname(file), '..', directory)]),
-    ...(options.output ? [dirname(resolve(options.output))] : [])
-  ]);
-  const ids = new Set();
-  for (const path of directories) {
+// Best-effort scan of JSON records in the given directories. A file that is
+// not an ORBIT record (a commented tsconfig.json, a file holding null) must
+// not stop the command.
+async function scanRecords(directories) {
+  const records = [];
+  for (const path of new Set(directories)) {
     let files;
     try {
       files = await readdir(path);
     } catch (error) {
-      if (error.code === 'ENOENT') continue;
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') continue;
       throw error;
     }
-    for (const file of files.filter(file => file.endsWith('.json'))) {
-      // Best-effort scan: a file that is not an ORBIT record (a commented
-      // tsconfig.json, a file holding null) must not stop the command.
+    for (const file of files.filter(file => file.endsWith('.json')).sort()) {
       try {
-        const id = (await readJson(join(path, file)))?.id;
-        if (typeof id === 'string') ids.add(id);
+        const record = await readJson(join(path, file));
+        if (record && typeof record === 'object') records.push({ file: join(path, file), record });
       } catch {
-        // Not readable as JSON; it cannot hold a colliding record ID.
+        // Not readable as JSON; it cannot hold an ORBIT record.
       }
     }
   }
+  return records;
+}
+
+// Fallback ID: <prefix>-<UTC timestamp>. The scan below makes the ID unique
+// among nearby records; a same-second clash gets a deterministic numeric
+// suffix. Both cases print a notice so the operator is never surprised.
+async function defaultId(prefix, directory, options, sources = []) {
+  const base = `${prefix}-${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}`;
+  const directories = [
+    resolve(directory), resolve('orbit', directory),
+    ...sources.flatMap(file => [dirname(resolve(file)), resolve(dirname(file), '..', directory)]),
+    ...(options.output ? [dirname(resolve(options.output))] : [])
+  ];
+  const ids = new Set((await scanRecords(directories)).map(({ record }) => record.id).filter(id => typeof id === 'string'));
   let id = base;
   for (let suffix = 2; ids.has(id); suffix += 1) id = `${base}-${suffix}`;
+  const clash = id === base ? '' : ` because ${base} already exists`;
+  console.error(`ORBIT notice: no --id given; using timestamp ID ${id}${clash}. Pass --id <slug> to name the record.`);
   return id;
+}
+
+// Resolve the Project Snapshot that a Reconciliation names. An explicit
+// --snapshot file wins; otherwise search snapshots/ under --root, next to the
+// Reconciliation's record directory, and under the working directory.
+async function resolveSliceSnapshot(reconciliation, options) {
+  const snapshotId = reconciliation.projectSnapshotId;
+  if (hasTextOption(options, 'snapshot')) {
+    await validateFile(resolve(options.snapshot), 'snapshot');
+    const snapshot = await readJson(resolve(options.snapshot));
+    if (snapshot.id !== snapshotId) {
+      throw new Error(`--snapshot ${options.snapshot} holds ${snapshot.id}, but the Reconciliation names Project Snapshot ${snapshotId}.`);
+    }
+    return snapshot;
+  }
+  const reconciliationDirectory = dirname(resolve(options.reconciliation));
+  const directories = [
+    ...(hasTextOption(options, 'root') ? [resolve(options.root, 'snapshots')] : []),
+    resolve(reconciliationDirectory, '..', 'snapshots'), reconciliationDirectory,
+    resolve('snapshots'), resolve('orbit', 'snapshots')
+  ];
+  const match = (await scanRecords(directories))
+    .find(({ record }) => record.id === snapshotId && Array.isArray(record.repositories));
+  if (!match) return undefined;
+  await validateFile(match.file, 'snapshot');
+  return match.record;
+}
+
+async function sliceRepositories(reconciliation, options, repositoryIds) {
+  if (repositoryIds.some(value => typeof value !== 'string')) {
+    throw new Error('Usage: orbit slice ... --repository <id> requires a repository ID.');
+  }
+  const snapshot = await resolveSliceSnapshot(reconciliation, options);
+  if (!snapshot) {
+    if (repositoryIds.length > 0) throw new Error(`Project Snapshot ${reconciliation.projectSnapshotId} was not found; pass --snapshot <file> or --root <directory>.`);
+    console.error(`ORBIT notice: Project Snapshot ${reconciliation.projectSnapshotId} was not found; basedOn.repositories is empty. Pass --snapshot <file> or --root <directory>.`);
+    return {};
+  }
+  return snapshotRepositoryCommits(snapshot, repositoryIds);
 }
 
 async function outputRecord(record, output, kind) {
@@ -137,12 +187,13 @@ try {
       await outputRecord(record, options.output, 'reconciliation');
     } else if (command === 'slice') {
       const options = flags(args);
-      if (!options.plan || !options.reconciliation || !options.outcome || !options.objective || !options.why) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <id>] [--output <file>]');
+      if (!options.plan || !options.reconciliation || !options.outcome || !options.objective || !options.why) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <slug>] [--snapshot <file> | --root <directory>] [--repository <id> ...] [--output <file>]');
       const plan = await readJson(resolve(options.plan));
       const reconciliation = await readJson(resolve(options.reconciliation));
       await validateFile(resolve(options.plan), 'plan');
       await validateFile(resolve(options.reconciliation), 'reconciliation');
-      const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
+      const repositories = await sliceRepositories(reconciliation, options, optionValues(args, 'repository'));
+      const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), repositories, outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
       await outputRecord(record, options.output, 'slice');
     } else {
       throw new Error(`Usage: orbit ${command} <record.json>`);
