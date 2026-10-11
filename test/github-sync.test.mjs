@@ -207,17 +207,50 @@ test('rejects an inconsistent record chain before any GitHub call when a prefix 
   assert.equal(calls, 0);
 });
 
-test('accepts a prefix with a closed comment and closed fences', () => {
-  const bodyPrefix = 'Owner <!-- internal note -->\n```markdown\nExample\n```\n~~~\nAnother example\n~~~';
-  const generated = buildGitHubIssuePayload({ plan, reconciliation, slice }).body;
-  assert.equal(buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }).body,
-    `${bodyPrefix}\n\n${generated}`);
-});
+for (const [name, bodyPrefix, message] of [
+  ['closed comment', 'Owner <!-- internal note -->', /raw HTML.*&lt;/],
+  ['closed backtick fence', '```markdown\nExample\n```', /fence marker/],
+  ['closed tilde fence', '~~~\nExample\n~~~', /fence marker/],
+  ['Rex renderer example', 'text <!--\n```\n-->\n```\n<!--\n```', /raw HTML.*&lt;/],
+  ['list fence', '- ```', /fence marker/],
+  ['block quote fence', '> ~~~', /fence marker/],
+  ['details tag', '<details>', /raw HTML.*&lt;/],
+  ['closing tag', '</div>', /raw HTML.*&lt;/],
+  ['HTML note', '<!-- note -->', /raw HTML.*&lt;/],
+  ['processing instruction', '<?x?>', /raw HTML.*&lt;/],
+  ['indented fence', '    ```', /fence marker/],
+  ['midline fence', 'Owner ~~~~ text', /fence marker/],
+  ['declaration', '<!DOCTYPE html>', /raw HTML.*&lt;/]
+]) {
+  test(`rejects plain-text prefix violation ${name} before GitHub calls`, async () => {
+    for (const dryRun of [true, false]) {
+      let calls = 0;
+      await assert.rejects(syncGitHub({
+        plan, snapshot, reconciliation, slice, repo: 'me2resh/demo', bodyPrefix, dryRun,
+        execCommand: async () => { calls += 1; return { stdout: '' }; }
+      }), message);
+      assert.equal(calls, 0);
+    }
+  });
+}
+
+for (const bodyPrefix of [
+  'a < b and 3 <4', '**bold**', '[link](https://example.com)',
+  'Use `code` here', 'Use ``code with ` inside`` here', '&lt;div&gt;'
+]) {
+  test(`accepts plain text and inline Markdown: ${bodyPrefix}`, async () => {
+    const result = await syncGitHub({
+      plan, snapshot, reconciliation, slice, repo: 'me2resh/demo', bodyPrefix, dryRun: true
+    });
+    const generated = buildGitHubIssuePayload({ plan, reconciliation, slice }).body;
+    assert.equal(result.body, `${bodyPrefix}\n\n${generated}`);
+  });
+}
 
 for (const [name, bodyPrefix, message] of [
-  ['comment', 'Owner <!-- hidden', /unclosed HTML comment/],
-  ['backticks', 'Owner\n````\nhidden\n```', /unclosed code fence/],
-  ['tildes', 'Owner\n~~~\nhidden\n```', /unclosed code fence/],
+  ['comment', 'Owner <!-- hidden', /raw HTML/],
+  ['backticks', 'Owner\n````\nhidden\n```', /fence marker/],
+  ['tildes', 'Owner\n~~~\nhidden\n```', /fence marker/],
   ['BOM', '\uFEFFOwner', /byte order mark U\+FEFF/]
 ]) {
   test(`rejects unsafe prefix ${name} before GitHub calls`, async () => {
@@ -234,12 +267,12 @@ for (const separator of ['2028', '2029']) {
   test(`rejects a fence opener ending with U+${separator}`, () => {
     const bodyPrefix = `Owner\n\`\`\`${String.fromCodePoint(parseInt(separator, 16))}`;
     assert.throws(() => buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }),
-      new RegExp(`control character U\\+${separator}`));
+      new RegExp(`${separator === '2028' ? 'line' : 'paragraph'} separator U\\+${separator}`));
   });
 }
 
 test('rejects <!-- even inside inline code, on purpose', () => {
   const bodyPrefix = 'Use `<!--` to open a comment';
   assert.throws(() => buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }),
-    /unclosed HTML comment/);
+    /raw HTML/);
 });
