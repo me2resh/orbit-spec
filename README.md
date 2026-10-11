@@ -43,6 +43,16 @@ npx orbit slice examples/slice-minimal.json
 
 `orbit validate --all --root <directory>` validates only the record directories under that root (`plans/`, `snapshots/`, `reconciliations/`, `slices/`). It does not read the package fixtures. Harness adapters that store project records outside this repository must pass `--root`.
 
+A record root can also hold superseded records under `history/`, in the same four subdirectories. Move the superseded Plan revision and its Reconciliation to `history/` when a new Plan revision arrives. Validation applies these rules:
+
+- The command schema-validates every record under `history/`.
+- History records resolve references. They are never current.
+- Each Plan `id` has at most one revision outside `history/`.
+- A current record can depend on a history record only through `basedOn` provenance on an Execution Slice. A delivered slice keeps the `basedOn` it was cut from.
+- A Plan `id` and `revision`, or any other record `id`, must be unique across `history/` and the current directories.
+
+`orbit progress` does not read `history/`. See [AgDR-0009](docs/agdr/AgDR-0009-validate-resolves-history.md).
+
 Harness adapters should call these commands and preserve their exit status. They must not replace ORBIT validation with harness-specific rules.
 
 The lifecycle commands also create records from explicit inputs:
