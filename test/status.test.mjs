@@ -133,6 +133,19 @@ test('status reports "not checked" for a missing path, a missing --path and a mi
   assert.ok(noGit.stdout.includes('not checked: git command not found'));
 });
 
+test('status treats a snapshot commit that looks like a git option as a revision', async t => {
+  const repo = gitRepository(t, 1);
+  const target = mkdtempSync(join(tmpdir(), 'orbit-status-target-'));
+  t.after(() => rmSync(target, { recursive: true, force: true }));
+  const root = recordRoot(t, `--output=${join(target, 'created')}`);
+  const result = await run(['--root', root, '--repository', 'web', '--path', repo.path, '--json']);
+  assert.equal(result.code, 0, result.stderr);
+  const [web] = JSON.parse(result.stdout).repositories;
+  assert.equal(web.checked, false);
+  assert.match(web.note, /^not checked: /);
+  assert.deepEqual(readdirSync(target), []);
+});
+
 test('status uses an injected git command and reports an unknown observed commit', async t => {
   const repo = gitRepository(t, 0);
   const root = recordRoot(t, 'abc1234');
