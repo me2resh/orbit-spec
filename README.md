@@ -17,6 +17,8 @@ ORBIT v0.1 is under development. The repository begins with the four record sche
 - **Reconciliation** — assessment of a Plan against observed evidence.
 - **ExecutionSlice** — the next bounded change justified by a Reconciliation.
 
+A Plan revision is immutable after a Reconciliation or slice references it. See [Revising a criterion](docs/revising-a-criterion.md) for when a change needs a new Plan revision.
+
 ## Validate
 
 ```sh
@@ -41,20 +43,59 @@ npx orbit slice examples/slice-minimal.json
 
 `orbit validate --all --root <directory>` validates only the record directories under that root (`plans/`, `snapshots/`, `reconciliations/`, `slices/`). It does not read the package fixtures. Harness adapters that store project records outside this repository must pass `--root`.
 
+A record root can also hold superseded records under `history/`, in the same four subdirectories. Move the superseded Plan revision and its Reconciliation to `history/` when a new Plan revision arrives. Validation applies these rules:
+
+- The command schema-validates every record under `history/`.
+- History records resolve references. They are never current.
+- Each Plan `id` has at most one revision outside `history/`.
+- A current record can depend on a history record only through `basedOn` provenance on an Execution Slice. A delivered slice keeps the `basedOn` it was cut from.
+- A Plan `id` and `revision`, or any other record `id`, must be unique across `history/` and the current directories.
+
+`orbit progress` does not read `history/`. See [AgDR-0009](docs/agdr/AgDR-0009-validate-resolves-history.md).
+
 Harness adapters should call these commands and preserve their exit status. They must not replace ORBIT validation with harness-specific rules.
 
 The lifecycle commands also create records from explicit inputs:
 
 ```sh
-npx orbit snapshot --project my-project --repository app --path . --output snapshot.json
-npx orbit snapshot --project my-project \
+npx orbit snapshot --project my-project --id snapshot-2026-10-11 \
+  --repository app --path . --output snapshots/snapshot-2026-10-11.json
+npx orbit snapshot --project my-project --id snapshot-web-api \
   --repository web --path ../web \
   --repository api --path ../api \
-  --output project-snapshot.json
-npx orbit reconcile --plan plan.json --snapshot snapshot.json --output reconciliation.json
-npx orbit slice --plan plan.json --reconciliation reconciliation.json \
-  --outcome outcome-id --objective "Bounded change" --why "Evidence supports this change" \
-  --output slice.json
+  --output snapshots/snapshot-web-api.json
+npx orbit reconcile --plan plans/plan.json --snapshot snapshots/snapshot-2026-10-11.json \
+  --id reconciliation-2026-10-11 --output reconciliations/reconciliation-2026-10-11.json
+npx orbit slice --plan plans/plan.json --reconciliation reconciliations/reconciliation-2026-10-11.json \
+  --id slice-login-form --outcome outcome-id \
+  --objective "Bounded change" --why "Evidence supports this change" \
+  --output slices/slice-login-form.json
+```
+
+### Record IDs
+
+Pass `--id <slug>` to name each record. This is the recommended usage: a slug such as `slice-login-form` tells a reader what the record is. Without `--id`, the command uses a fallback ID of the form `<kind>-<plan or project>-<UTC timestamp>` and prints a notice on standard error. The command scans nearby records, so a fallback ID never repeats an existing ID. If a record with the same fallback ID already exists, for example because two slices were cut in the same second, the command adds a numeric suffix (`-2`, `-3`) and the notice names the clash.
+
+### Slice provenance
+
+`orbit slice` fills `basedOn.repositories` with the repository IDs and commits from the Project Snapshot that the Reconciliation names. A fresh slice therefore passes `orbit validate --all --root <directory>` without hand edits.
+
+The command finds the Project Snapshot in this order:
+
+1. The file given by `--snapshot <file>`. Its ID must match the Reconciliation's `projectSnapshotId`.
+2. `snapshots/` under `--root <directory>`.
+3. `snapshots/` next to the Reconciliation's record directory, then the Reconciliation's own directory.
+4. `snapshots/` and `orbit/snapshots/` under the working directory.
+
+Pass `--repository <id>` one or more times to limit the map to the named repositories. An ID that the Project Snapshot does not hold is an error. If the command cannot find the Project Snapshot, it prints a notice and leaves `basedOn.repositories` empty.
+
+```sh
+npx orbit slice --root docs/orbit \
+  --plan docs/orbit/plans/plan.json \
+  --reconciliation docs/orbit/reconciliations/reconciliation-2026-10-11.json \
+  --id slice-api-auth --outcome outcome-id --repository api \
+  --objective "Bounded change" --why "Evidence supports this change" \
+  --output docs/orbit/slices/slice-api-auth.json
 ```
 
 Before a provider write, validate and preview the complete record chain:
@@ -174,9 +215,52 @@ Legend: grey = not-verified; amber = partially-verified; green = achieved; red =
 Outcome progress: achieved = 1, partially-verified = 0.5, other = 0; averaged over its criteria and rounded to a whole percent (0% with no criteria).
 ````
 
+## Status
+
+`orbit status --root <directory> [--plan <id>] [--repository <id> --path <git-repo> ...] [--json]` shows whether the latest Reconciliation is still current. It prints:
+
+- The Plan ID, title and revision.
+- The latest Reconciliation, its `reconciledAt` and its Project Snapshot ID.
+- The Outcomes table, with the same counts that `orbit progress` calculates.
+- For each repository in that Project Snapshot: the observed branch and commit, the current branch and `HEAD`, and the number of commits since the observed commit (`git rev-list --count <observed>..HEAD`).
+- The slices for the Plan.
+
+```sh
+node bin/orbit.js status --root orbit --repository web --path ../web
+node bin/orbit.js status --root orbit --plan plan-sso --repository web --path ../web --repository api --path ../api --json
+```
+
+The command selects the Plan and the Reconciliation with the same rules as `orbit progress`. It reads the Project Snapshot from `snapshots/` under the root.
+
+The command is read-only. It writes no file and no record, calls no provider, and does no remote fetch. It runs only `git rev-parse`, `git branch --show-current` and `git rev-list` in each repository you name.
+
+A repository gets `not checked` and a reason, and the command continues, when:
+
+- You give no `--path` for it.
+- The path does not exist.
+- The `git` command is missing or fails, for example when the observed commit is not in the local repository.
+
+The command exits 0 when the records are valid, also when new commits exist since the snapshot. Invalid records or options cause a non-zero exit. `--json` prints the same fields as an object with `plan`, `reconciliation`, `outcomes`, `repositories`, `slices` and `notes`. See [AgDR-0007](docs/agdr/AgDR-0007-orbit-status-command.md).
+
 ## Scope
 
 ORBIT does not require a specific agent, issue tracker, branch strategy, repository layout, storage system, or execution provider.
+
+## Claude Code plugin
+
+In Claude Code, add the marketplace and install the plugin:
+
+```
+/plugin marketplace add me2resh/apexyard
+/plugin install orbit@apexyard
+```
+
+The plugin runs the `orbit` CLI. Until the npm package is published, install the CLI with `npm install -g github:me2resh/orbit-spec#v0.1.0`. After publication, install it with `npm install -g orbit-spec`.
+
+## Contributing
+
+Pull requests must pass the CI checks `test (22)` and `test (24)`.
+Run `npm test` to run the same checks locally.
 
 ## Licensing
 

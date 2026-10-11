@@ -112,3 +112,72 @@ test('default IDs ignore JSON files that are not ORBIT records', async t => {
   const { record } = await create('snapshot', 1);
   assert.equal(record.id, `snapshot-${plan.project.id}-20261004T093213Z`);
 });
+
+const sliceInputs = (root, extra = []) => ['slice', '--plan', join(root, 'plans', 'plan-test.json'),
+  '--reconciliation', join(root, 'reconciliations', 'reconciliation-1.json'),
+  '--outcome', 'outcome-pending', '--objective', 'Implement the feature', '--why', 'Evidence is missing', ...extra];
+
+async function twoRepositoryChain(t) {
+  const context = await setup(t);
+  const snapshot = await context.create('snapshot', 1, ['--repository', 'web', '--path', repository]);
+  // Give the second repository a distinct commit so the map is unambiguous.
+  snapshot.record.repositories[1].commit = 'abcdef1234567';
+  await writeFile(snapshot.file, JSON.stringify(snapshot.record));
+  await context.create('reconcile', 1);
+  return { ...context, snapshot };
+}
+
+test('slice fills basedOn.repositories from the Project Snapshot and validates with no edits', async t => {
+  const { create, run, root, snapshot } = await twoRepositoryChain(t);
+  const { record } = await create('slice', 1, ['--id', 'slice-auto']);
+  assert.deepEqual(record.basedOn.repositories, {
+    app: snapshot.record.repositories[0].commit,
+    web: 'abcdef1234567'
+  });
+  const { stdout } = await run(['validate', '--all', '--root', root]);
+  assert.match(stdout, /Validated 4 ORBIT records/);
+});
+
+test('slice --repository limits basedOn.repositories and rejects an unknown repository', async t => {
+  const { run, root } = await twoRepositoryChain(t);
+  const { stdout } = await run(sliceInputs(root, ['--id', 'slice-web', '--repository', 'web']));
+  assert.deepEqual(JSON.parse(stdout).basedOn.repositories, { web: 'abcdef1234567' });
+  await assert.rejects(run(sliceInputs(root, ['--id', 'slice-x', '--repository', 'missing'])),
+    error => /has no repository missing/.test(error.stderr));
+});
+
+test('slice --snapshot overrides the search and must match the Reconciliation snapshot ID', async t => {
+  const { run, root, snapshot } = await twoRepositoryChain(t);
+  const elsewhere = await mkdtemp(join(tmpdir(), 'orbit-snapshot-'));
+  t.after(() => rm(elsewhere, { recursive: true, force: true }));
+  const override = join(elsewhere, 'snapshot.json');
+  const changed = structuredClone(snapshot.record);
+  changed.repositories[0].commit = '1234567abcdef';
+  await writeFile(override, JSON.stringify(changed));
+  const { stdout } = await run(sliceInputs(root, ['--id', 'slice-override', '--snapshot', override]));
+  assert.deepEqual(JSON.parse(stdout).basedOn.repositories, { app: '1234567abcdef', web: 'abcdef1234567' });
+  changed.id = 'snapshot-other';
+  await writeFile(override, JSON.stringify(changed));
+  await assert.rejects(run(sliceInputs(root, ['--id', 'slice-bad', '--snapshot', override])),
+    error => /names Project Snapshot/.test(error.stderr));
+});
+
+test('two slices cut in the same second get distinct IDs, a notice, and validate', async t => {
+  const { run, root, plan } = await twoRepositoryChain(t);
+  const base = `slice-${plan.id}-20261004T093213Z`;
+  const first = await run(sliceInputs(root, ['--output', join(root, 'slices', 'slice-a.json')]));
+  const second = await run(sliceInputs(root, ['--output', join(root, 'slices', 'slice-b.json')]));
+  const ids = await Promise.all(['a', 'b'].map(async name =>
+    JSON.parse(await readFile(join(root, 'slices', `slice-${name}.json`), 'utf8')).id));
+  assert.deepEqual(ids, [base, `${base}-2`]);
+  assert.match(first.stderr, new RegExp(`using timestamp ID ${base}\\. Pass --id <slug>`));
+  assert.match(second.stderr, new RegExp(`using timestamp ID ${base}-2 because ${base} already exists`));
+  const { stdout } = await run(['validate', '--all', '--root', root]);
+  assert.match(stdout, /Validated 5 ORBIT records/);
+});
+
+test('an explicit --id prints no fallback notice', async t => {
+  const { run, root } = await twoRepositoryChain(t);
+  const { stderr } = await run(sliceInputs(root, ['--id', 'slice-named']));
+  assert.doesNotMatch(stderr, /timestamp ID/);
+});
