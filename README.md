@@ -112,6 +112,37 @@ npx orbit sync github \
 
 The GitHub adapter rejects inconsistent projects, Plan revisions, outcomes, acceptance criteria, incomplete Reconciliation assessments, and repository provenance before it calls GitHub. Remove `--dry-run` only after you review the proposed issue. The CLI does not infer intent. Harnesses provide explicit inputs and apply their own workflow rules.
 
+### Issue body prefix
+
+Use a body prefix when your workflow needs extra text at the top of the issue. For example, a governance hook can require an `ORBIT slice: <id>` line.
+
+```sh
+npx orbit sync github \
+  --plan examples/plan-sso.json \
+  --snapshot examples/project-snapshot-2026-09-14.json \
+  --reconciliation examples/reconciliation-001.json \
+  --slice examples/slice-001.json \
+  --repo owner/repository \
+  --body-prefix "ORBIT slice: slice-001" \
+  --dry-run
+```
+
+- `--body-prefix <text>` supplies the prefix on the command line.
+- `--body-prefix-file <file>` reads the prefix from a UTF-8 file. The CLI removes one final line ending from the file content.
+- Use one of the two options. The command fails with a usage error when you give both options, or one option two times.
+- The adapter writes the prefix, one blank line, and then the generated body. The generated body does not change.
+- The dry-run preview, the create path, and the `--issue <number>` edit path send the same body.
+- The prefix is plain text. It cannot remove or change the generated sections.
+
+The adapter validates the prefix and never changes it. It rejects a prefix with a clear error, before any GitHub call, when the prefix:
+
+- Is empty or contains only whitespace.
+- Has more than 1,024 characters (Unicode code points).
+- Contains a control character. Tab (U+0009) and line feed (U+000A) are permitted. Carriage return (U+000D), other C0 controls, DEL (U+007F), C1 controls (U+0080 to U+009F), and the bidirectional controls U+202A to U+202E and U+2066 to U+2069 are rejected.
+- Starts or ends with a line break.
+
+The record chain is validated before the prefix. An invalid record chain fails first, with or without a prefix.
+
 ## Progress
 
 `orbit progress --root <directory> [--plan <id>] [--output <file>] [--direction TD|LR]` produces a Markdown progress report with a Mermaid graph, an Outcomes table, and an acceptance-criteria table:
