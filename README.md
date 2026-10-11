@@ -17,6 +17,8 @@ ORBIT v0.1 is under development. The repository begins with the four record sche
 - **Reconciliation** — assessment of a Plan against observed evidence.
 - **ExecutionSlice** — the next bounded change justified by a Reconciliation.
 
+A Plan revision is immutable after a Reconciliation or slice references it. See [Revising a criterion](docs/revising-a-criterion.md) for when a change needs a new Plan revision.
+
 ## Validate
 
 ```sh
@@ -173,6 +175,22 @@ The command exits 0 when the records are valid, also when new commits exist sinc
 ## Scope
 
 ORBIT does not require a specific agent, issue tracker, branch strategy, repository layout, storage system, or execution provider.
+
+## Claude Code plugin
+
+In Claude Code, add the marketplace and install the plugin:
+
+```
+/plugin marketplace add me2resh/apexyard
+/plugin install orbit@apexyard
+```
+
+The plugin runs the `orbit` CLI. Until the npm package is published, install the CLI with `npm install -g github:me2resh/orbit-spec#v0.1.0`. After publication, install it with `npm install -g orbit-spec`.
+
+## Contributing
+
+Pull requests must pass the CI checks `test (22)` and `test (24)`.
+Run `npm test` to run the same checks locally.
 
 ## Licensing
 
