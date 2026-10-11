@@ -58,15 +58,44 @@ Harness adapters should call these commands and preserve their exit status. They
 The lifecycle commands also create records from explicit inputs:
 
 ```sh
-npx orbit snapshot --project my-project --repository app --path . --output snapshot.json
-npx orbit snapshot --project my-project \
+npx orbit snapshot --project my-project --id snapshot-2026-10-11 \
+  --repository app --path . --output snapshots/snapshot-2026-10-11.json
+npx orbit snapshot --project my-project --id snapshot-web-api \
   --repository web --path ../web \
   --repository api --path ../api \
-  --output project-snapshot.json
-npx orbit reconcile --plan plan.json --snapshot snapshot.json --output reconciliation.json
-npx orbit slice --plan plan.json --reconciliation reconciliation.json \
-  --outcome outcome-id --objective "Bounded change" --why "Evidence supports this change" \
-  --output slice.json
+  --output snapshots/snapshot-web-api.json
+npx orbit reconcile --plan plans/plan.json --snapshot snapshots/snapshot-2026-10-11.json \
+  --id reconciliation-2026-10-11 --output reconciliations/reconciliation-2026-10-11.json
+npx orbit slice --plan plans/plan.json --reconciliation reconciliations/reconciliation-2026-10-11.json \
+  --id slice-login-form --outcome outcome-id \
+  --objective "Bounded change" --why "Evidence supports this change" \
+  --output slices/slice-login-form.json
+```
+
+### Record IDs
+
+Pass `--id <slug>` to name each record. This is the recommended usage: a slug such as `slice-login-form` tells a reader what the record is. Without `--id`, the command uses a fallback ID of the form `<kind>-<plan or project>-<UTC timestamp>` and prints a notice on standard error. The command scans nearby records, so a fallback ID never repeats an existing ID. If a record with the same fallback ID already exists, for example because two slices were cut in the same second, the command adds a numeric suffix (`-2`, `-3`) and the notice names the clash.
+
+### Slice provenance
+
+`orbit slice` fills `basedOn.repositories` with the repository IDs and commits from the Project Snapshot that the Reconciliation names. A fresh slice therefore passes `orbit validate --all --root <directory>` without hand edits.
+
+The command finds the Project Snapshot in this order:
+
+1. The file given by `--snapshot <file>`. Its ID must match the Reconciliation's `projectSnapshotId`.
+2. `snapshots/` under `--root <directory>`.
+3. `snapshots/` next to the Reconciliation's record directory, then the Reconciliation's own directory.
+4. `snapshots/` and `orbit/snapshots/` under the working directory.
+
+Pass `--repository <id>` one or more times to limit the map to the named repositories. An ID that the Project Snapshot does not hold is an error. If the command cannot find the Project Snapshot, it prints a notice and leaves `basedOn.repositories` empty.
+
+```sh
+npx orbit slice --root docs/orbit \
+  --plan docs/orbit/plans/plan.json \
+  --reconciliation docs/orbit/reconciliations/reconciliation-2026-10-11.json \
+  --id slice-api-auth --outcome outcome-id --repository api \
+  --objective "Bounded change" --why "Evidence supports this change" \
+  --output docs/orbit/slices/slice-api-auth.json
 ```
 
 Before a provider write, validate and preview the complete record chain:
