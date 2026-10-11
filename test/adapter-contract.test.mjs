@@ -284,6 +284,64 @@ test('sync github rejects valueless options before reading records or calling Gi
   }
 });
 
+const syncFixtureArgs = [
+  'github',
+  '--plan', 'examples/plan-sso.json',
+  '--snapshot', 'examples/project-snapshot-2026-09-14.json',
+  '--reconciliation', 'examples/reconciliation-001.json',
+  '--slice', 'examples/slice-001.json',
+  '--repo', 'me2resh/demo',
+  '--dry-run'
+];
+
+test('sync github --dry-run --body-prefix previews the prefix at the top of the body', async () => {
+  const result = await run('sync', [...syncFixtureArgs, '--body-prefix', 'ORBIT slice: slice-001']);
+  assert.equal(result.code, 0, result.stderr);
+  const preview = JSON.parse(result.stdout);
+  assert.ok(preview.body.startsWith('ORBIT slice: slice-001\n\n## Orbit Execution Slice\n'));
+  assert.equal(preview.body.split('ORBIT slice: slice-001').length - 1, 1);
+});
+
+test('sync github --body-prefix-file reads the prefix and removes one final line ending', async () => {
+  const rootDir = mkdtempSync(join(tmpdir(), 'orbit-prefix-'));
+  try {
+    const prefixFile = join(rootDir, 'prefix.txt');
+    writeFileSync(prefixFile, 'ORBIT slice: slice-001\nOwner: platform\n');
+    const result = await run('sync', [...syncFixtureArgs, '--body-prefix-file', prefixFile]);
+    assert.equal(result.code, 0, result.stderr);
+    const preview = JSON.parse(result.stdout);
+    assert.ok(preview.body.startsWith('ORBIT slice: slice-001\nOwner: platform\n\n## Orbit Execution Slice\n'));
+  } finally {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('sync github rejects both body prefix options together with a usage error', async () => {
+  const result = await run('sync', [...syncFixtureArgs, '--body-prefix', 'one', '--body-prefix-file', 'README.md']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Usage: orbit sync github/);
+  assert.equal(result.stdout, '');
+});
+
+test('sync github rejects repeated or valueless body prefix options', async () => {
+  for (const extra of [['--body-prefix'], ['--body-prefix-file'], ['--body-prefix', 'one', '--body-prefix', 'two']]) {
+    const result = await run('sync', [...syncFixtureArgs, ...extra]);
+    assert.equal(result.code, 1, extra.join(' '));
+    assert.match(result.stderr, /Usage: orbit sync github/);
+  }
+});
+
+test('sync github reports an unreadable body prefix file and an invalid prefix clearly', async () => {
+  const missing = await run('sync', [...syncFixtureArgs, '--body-prefix-file', 'does-not-exist.txt']);
+  assert.equal(missing.code, 1);
+  assert.match(missing.stderr, /Cannot read the body prefix file does-not-exist\.txt: ENOENT/);
+
+  const invalid = await run('sync', [...syncFixtureArgs, '--body-prefix', 'bell \u0007']);
+  assert.equal(invalid.code, 1);
+  assert.match(invalid.stderr, /control character U\+0007/);
+  assert.equal(invalid.stdout, '');
+});
+
 test('cross-record validation rejects a missing snapshot reference', () => {
   assert.throws(() => validateReferences([
     { kind: 'plan', value: { id: 'plan-1', revision: 1 } },

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { validateFile, validateRecordRoot, validateRepository } from '../lib/validator.mjs';
 import { buildReconciliation, buildSlice, captureProjectSnapshot, readJson, writeJson } from '../lib/lifecycle.mjs';
@@ -166,17 +166,28 @@ try {
   } else if (command === 'sync' && args[0] === 'github') {
     const options = flags(args.slice(1));
     const required = ['plan', 'snapshot', 'reconciliation', 'slice', 'repo'];
-    const valued = ['issue', 'project-owner', 'project-number'];
+    const valued = ['issue', 'project-owner', 'project-number', 'body-prefix', 'body-prefix-file'];
     const hasInvalidOption = required.some(key => !hasTextOption(options, key))
       || valued.some(key => options[key] !== undefined && !hasTextOption(options, key))
+      || ['body-prefix', 'body-prefix-file'].some(key => optionValues(args, key).length > 1)
+      || (options['body-prefix'] !== undefined && options['body-prefix-file'] !== undefined)
       || (options['dry-run'] !== undefined && options['dry-run'] !== true);
     if (hasInvalidOption) {
-      throw new Error('Usage: orbit sync github --plan <file> --snapshot <file> --reconciliation <file> --slice <file> --repo <owner/name> [--project-owner <owner> --project-number <number>] [--issue <number>] [--dry-run]');
+      throw new Error('Usage: orbit sync github --plan <file> --snapshot <file> --reconciliation <file> --slice <file> --repo <owner/name> [--project-owner <owner> --project-number <number>] [--issue <number>] [--body-prefix <text> | --body-prefix-file <file>] [--dry-run]');
     }
     const plan = await readJson(resolve(options.plan));
     const snapshot = await readJson(resolve(options.snapshot));
     const slice = await readJson(resolve(options.slice));
     const reconciliation = await readJson(resolve(options.reconciliation));
+    let bodyPrefix = options['body-prefix'];
+    if (options['body-prefix-file'] !== undefined) {
+      try {
+        // Remove only the one line ending that ends a text file.
+        bodyPrefix = (await readFile(resolve(options['body-prefix-file']), 'utf8')).replace(/\r?\n$/, '');
+      } catch (error) {
+        throw new Error(`Cannot read the body prefix file ${options['body-prefix-file']}: ${error.code ?? error.message}`);
+      }
+    }
     await validateFile(resolve(options.plan), 'plan');
     await validateFile(resolve(options.snapshot), 'snapshot');
     await validateFile(resolve(options.slice), 'slice');
@@ -190,6 +201,7 @@ try {
       projectOwner: options['project-owner'],
       projectNumber: options['project-number'],
       issueNumber: options.issue,
+      bodyPrefix,
       dryRun: Boolean(options['dry-run'])
     });
     console.log(JSON.stringify(result, null, 2));
