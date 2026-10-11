@@ -160,6 +160,11 @@ In Claude Code, add the marketplace and install the plugin:
 
 The plugin runs the `orbit` CLI. Until the npm package is published, install the CLI with `npm install -g github:me2resh/orbit-spec#v0.1.0`. After publication, install it with `npm install -g orbit-spec`.
 
+## Contributing
+
+Pull requests must pass the CI checks `test (22)` and `test (24)`.
+Run `npm test` to run the same checks locally.
+
 ## Licensing
 
 Specification and documentation are licensed under [CC BY 4.0](LICENSE). Code, scripts, and skills are licensed under [MIT](LICENSE-CODE).
