@@ -1,0 +1,11 @@
+{
+  "name": "orbit",
+  "version": "0.1.0",
+  "description": "ORBIT planning skill that runs the orbit CLI to validate records, capture a project snapshot, reconcile a plan, write the next slice, report progress, and sync that slice to GitHub.",
+  "author": {
+    "name": "me2resh"
+  },
+  "homepage": "https://github.com/me2resh/orbit-spec",
+  "repository": "https://github.com/me2resh/orbit-spec",
+  "license": "MIT"
+}
