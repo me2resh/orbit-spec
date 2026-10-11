@@ -17,6 +17,8 @@ ORBIT v0.1 is under development. The repository begins with the four record sche
 - **Reconciliation** — assessment of a Plan against observed evidence.
 - **ExecutionSlice** — the next bounded change justified by a Reconciliation.
 
+A Plan revision is immutable after a Reconciliation or slice references it. See [Revising a criterion](docs/revising-a-criterion.md) for when a change needs a new Plan revision.
+
 ## Validate
 
 ```sh
