@@ -229,3 +229,17 @@ for (const [name, bodyPrefix, message] of [
     assert.equal(calls, 0);
   });
 }
+
+for (const separator of ['2028', '2029']) {
+  test(`rejects a fence opener ending with U+${separator}`, () => {
+    const bodyPrefix = `Owner\n\`\`\`${String.fromCodePoint(parseInt(separator, 16))}`;
+    assert.throws(() => buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }),
+      new RegExp(`control character U\\+${separator}`));
+  });
+}
+
+test('rejects <!-- even inside inline code, on purpose', () => {
+  const bodyPrefix = 'Use `<!--` to open a comment';
+  assert.throws(() => buildGitHubIssuePayload({ plan, reconciliation, slice, bodyPrefix }),
+    /unclosed HTML comment/);
+});

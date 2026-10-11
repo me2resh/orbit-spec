@@ -135,11 +135,16 @@ npx orbit sync github \
 - The prefix leaves generated section text unchanged. Markdown or HTML in the prefix can affect the rendered view.
 - Prefixes must close HTML comments and code fences, and must not start with a byte order mark.
 
+The guard treats every `<!--` outside a code fence as a comment opener, also inside inline code.
+So it rejects an unclosed `<!--` in inline code, and the generated body can never be hidden.
+Write `&lt;!--` to show the text.
+
 The adapter validates the prefix and never changes it. It rejects a prefix with a clear error, before any GitHub call, when the prefix:
 
 - Is empty or contains only whitespace.
 - Has more than 1,024 characters (Unicode code points).
 - Contains a control character. Tab (U+0009) and line feed (U+000A) are permitted. Carriage return (U+000D), other C0 controls, DEL (U+007F), C1 controls (U+0080 to U+009F), and the bidirectional controls U+202A to U+202E and U+2066 to U+2069 are rejected.
+- Contains a Unicode line separator (U+2028) or paragraph separator (U+2029).
 - Starts or ends with a line break.
 
 The record chain is validated before the prefix. An invalid record chain fails first, with or without a prefix.
