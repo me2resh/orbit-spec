@@ -114,7 +114,7 @@ The GitHub adapter rejects inconsistent projects, Plan revisions, outcomes, acce
 
 ### Issue body prefix
 
-Use a body prefix when your workflow needs extra text at the top of the issue. For example, a governance hook can require an `ORBIT slice: <id>` line.
+Use a body prefix when your workflow needs extra text at the top of the issue. For example, a governance hook can require an `ORBIT slice: slice-001` line.
 
 ```sh
 npx orbit sync github \
@@ -132,15 +132,23 @@ npx orbit sync github \
 - Use one of the two options. The command fails with a usage error when you give both options, or one option two times.
 - The adapter writes the prefix, one blank line, and then the generated body. The generated body does not change.
 - The dry-run preview, the create path, and the `--issue <number>` edit path send the same body.
-- The prefix leaves generated section text unchanged. Markdown or HTML in the prefix can affect the rendered view.
-- Prefixes must close HTML comments and code fences, and must not start with a byte order mark.
 
-The adapter validates the prefix and never changes it. It rejects a prefix with a clear error, before any GitHub call, when the prefix:
+The prefix must be plain text with inline Markdown. The adapter validates it without changing it. Invalid prefixes fail before any GitHub call.
 
-- Is empty or contains only whitespace.
-- Has more than 1,024 characters (Unicode code points).
-- Contains a control character. Tab (U+0009) and line feed (U+000A) are permitted. Carriage return (U+000D), other C0 controls, DEL (U+007F), C1 controls (U+0080 to U+009F), and the bidirectional controls U+202A to U+202E and U+2066 to U+2069 are rejected.
-- Starts or ends with a line break.
+The adapter rejects prefixes that:
+
+- Are empty or contain only whitespace.
+- Have more than 1,024 characters (Unicode code points).
+- Contain raw HTML: `<` followed by an ASCII letter, `/`, `!`, or `?`.
+- Contain fence markers: three or more consecutive backticks or tildes anywhere, including indented text, list items, and block quotes.
+- Contain forbidden control characters: C0 except tab and line feed, DEL (U+007F), or C1 (U+0080 to U+009F).
+- Contain bidirectional controls U+202A to U+202E or U+2066 to U+2069.
+- Contain a Unicode line separator (U+2028) or paragraph separator (U+2029).
+- Start or end with a line break.
+- Start with a byte order mark (U+FEFF).
+
+Tab (U+0009) and inner line feeds (U+000A) are allowed. Carriage return (U+000D) is rejected. Write `&lt;` to show a literal `<`.
+Comparisons such as `a < b` and `3 <4` are allowed. Inline Markdown such as bold text, links, and one- or two-backtick code spans is allowed.
 
 The record chain is validated before the prefix. An invalid record chain fails first, with or without a prefix.
 

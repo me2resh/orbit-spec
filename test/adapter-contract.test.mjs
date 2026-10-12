@@ -471,9 +471,9 @@ test('a later Plan revision with revisionNote validates', async () => {
 });
 
 for (const [name, prefix, message] of [
-  ['HTML comment', 'Owner <!-- hidden', /unclosed HTML comment/],
-  ['backtick fence', 'Owner\n```markdown\nhidden', /unclosed code fence/],
-  ['tilde fence', 'Owner\n~~~markdown\nhidden', /unclosed code fence/],
+  ['HTML comment', 'Owner <!-- hidden', /raw HTML/],
+  ['backtick fence', 'Owner\n```markdown\nhidden', /fence marker/],
+  ['tilde fence', 'Owner\n~~~markdown\nhidden', /fence marker/],
   ['leading BOM', '\uFEFFOwner', /byte order mark U\+FEFF/]
 ]) {
   test(`sync github rejects prefix ${name} through both options`, async () => {
