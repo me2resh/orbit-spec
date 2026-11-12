@@ -189,13 +189,14 @@ try {
     } else if (command === 'slice') {
       const options = flags(args);
       if (!options.plan || !options.reconciliation || !options.outcome || !options.objective || !options.why
-        || (options.snapshot !== undefined && !hasTextOption(options, 'snapshot'))) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <slug>] [--snapshot <file> | --root <directory>] [--repository <id> ...] [--output <file>]');
+        || (options.snapshot !== undefined && !hasTextOption(options, 'snapshot'))
+        || (options.outcomes !== undefined && !hasTextOption(options, 'outcomes'))) throw new Error('Usage: orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--outcomes <id,id>] [--id <slug>] [--snapshot <file> | --root <directory>] [--repository <id> ...] [--output <file>]');
       const plan = await readJson(resolve(options.plan));
       const reconciliation = await readJson(resolve(options.reconciliation));
       await validateFile(resolve(options.plan), 'plan');
       await validateFile(resolve(options.reconciliation), 'reconciliation');
       const repositories = await sliceRepositories(reconciliation, options, optionValues(args, 'repository'), plan.project.id);
-      const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), repositories, outcomeId: options.outcome, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
+      const record = buildSlice(plan, reconciliation, { id: options.id ?? await defaultId(`slice-${plan.id}`, 'slices', options, [options.plan, options.reconciliation]), repositories, outcomeId: options.outcome, outcomeIds: options.outcomes ? options.outcomes.split(',') : undefined, objective: options.objective, why: options.why, contributesTo: options.contributes ? options.contributes.split(',') : [], include: options.include ? options.include.split(',') : [], exclude: options.exclude ? options.exclude.split(',') : [] });
       await outputRecord(record, options.output, 'slice');
     } else {
       throw new Error(`Usage: orbit ${command} <record.json>`);

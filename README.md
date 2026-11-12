@@ -8,7 +8,7 @@ This repository is the source for the standard, its schemas, examples, validator
 
 ## Current status
 
-ORBIT v0.1 is under development. The repository begins with the four record schemas and examples that currently live in the website repository. The initial Plan, Project Snapshot, Reconciliation, and Execution Slice are under [`orbit/`](orbit/).
+ORBIT v0.2 is under development. Version 0.2 adds cross-outcome Execution Slices. Every 0.1 record stays valid. See [Spec versions](#spec-versions). The repository begins with the four record schemas and examples that currently live in the website repository. The initial Plan, Project Snapshot, Reconciliation, and Execution Slice are under [`orbit/`](orbit/).
 
 ## Records
 
@@ -16,6 +16,20 @@ ORBIT v0.1 is under development. The repository begins with the four record sche
 - **ProjectSnapshot** — point-in-time project and repository state.
 - **Reconciliation** — assessment of a Plan against observed evidence.
 - **ExecutionSlice** — the next bounded change justified by a Reconciliation.
+
+## Spec versions
+
+Each record states `specVersion`. ORBIT uses `major.minor` versions:
+
+- A minor version adds optional features. A record that is valid under an earlier minor version stays valid.
+- A record states the lowest spec version whose features it uses.
+
+| Version | Adds |
+| --- | --- |
+| `0.1` | Plan, Project Snapshot, Reconciliation, and Execution Slice |
+| `0.2` | Optional `outcomeIds` on an Execution Slice, for a [cross-outcome slice](docs/cross-outcome-slices.md) |
+
+All four schemas accept `0.1` and `0.2`. The lifecycle commands write `0.1`, except `orbit slice --outcomes`, which writes `0.2`.
 
 A Plan revision is immutable after a Reconciliation or slice references it. See [Revising a criterion](docs/revising-a-criterion.md) for when a change needs a new Plan revision.
 
@@ -97,6 +111,22 @@ npx orbit slice --root docs/orbit \
   --objective "Bounded change" --why "Evidence supports this change" \
   --output docs/orbit/slices/slice-api-auth.json
 ```
+
+### Cross-outcome slices
+
+A slice names one primary outcome in `outcomeId`. By default, every contributed criterion belongs to that outcome. To contribute criteria from several outcomes, for example in a walking skeleton, pass `--outcomes` with every outcome ID, including the primary outcome:
+
+```sh
+npx orbit slice --root docs/orbit \
+  --plan docs/orbit/plans/plan.json \
+  --reconciliation docs/orbit/reconciliations/reconciliation-2026-11-12.json \
+  --id slice-walking-skeleton --outcome browse --outcomes browse,checkout \
+  --contributes ac-browse-1,ac-checkout-1 \
+  --objective "Thin path through every layer" --why "Evidence supports this change" \
+  --output docs/orbit/slices/slice-walking-skeleton.json
+```
+
+The command writes `outcomeIds` and `specVersion` `0.2`. Validation requires at least one contributed criterion for each listed outcome. Read [Cross-outcome Execution Slices](docs/cross-outcome-slices.md) for the rules, the attribution in progress and status, and the review-size risk.
 
 Before a provider write, validate and preview the complete record chain:
 

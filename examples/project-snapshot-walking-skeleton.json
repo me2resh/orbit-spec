@@ -1,0 +1,9 @@
+{
+  "specVersion": "0.1",
+  "id": "snapshot-walking-skeleton",
+  "project": { "id": "example-shop" },
+  "observedAt": "2026-11-12T09:00:00Z",
+  "repositories": [
+    { "repositoryId": "shop", "branch": "main", "commit": "3c1d9e70" }
+  ]
+}

@@ -12,8 +12,8 @@
   ],
   "properties": {
     "specVersion": {
-      "const": "0.1",
-      "description": "ORBIT specification version."
+      "enum": ["0.1", "0.2"],
+      "description": "ORBIT specification version. A record states the lowest version whose features it uses."
     },
     "id": {
       "type": "string",
