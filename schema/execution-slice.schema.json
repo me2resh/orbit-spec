@@ -16,8 +16,8 @@
   ],
   "properties": {
     "specVersion": {
-      "const": "0.1",
-      "description": "ORBIT specification version."
+      "enum": ["0.1", "0.2"],
+      "description": "ORBIT specification version. A record states the lowest version whose features it uses."
     },
     "id": {
       "type": "string",
@@ -29,7 +29,16 @@
     },
     "outcomeId": {
       "type": "string",
-      "description": "Referenced Outcome identifier."
+      "description": "Primary Outcome identifier. Without outcomeIds, every contributed criterion belongs to this outcome."
+    },
+    "outcomeIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2,
+      "uniqueItems": true,
+      "description": "Since 0.2. Every Outcome that a cross-outcome slice contributes to, including outcomeId. Each listed outcome needs at least one contributed criterion."
     },
     "basedOn": {
       "type": "object",
@@ -95,6 +104,16 @@
       },
       "additionalProperties": false,
       "description": "Explicit change boundary."
+    }
+  },
+  "dependentSchemas": {
+    "outcomeIds": {
+      "properties": {
+        "specVersion": {
+          "const": "0.2",
+          "description": "A slice that uses outcomeIds needs ORBIT 0.2."
+        }
+      }
     }
   },
   "additionalProperties": false

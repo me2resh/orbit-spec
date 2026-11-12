@@ -1,0 +1,19 @@
+{
+  "specVersion": "0.2",
+  "id": "slice-walking-skeleton",
+  "planId": "plan-walking-skeleton",
+  "outcomeId": "browse",
+  "outcomeIds": ["browse", "checkout"],
+  "basedOn": {
+    "planRevision": 1,
+    "reconciliationId": "reconciliation-walking-skeleton",
+    "repositories": { "shop": "3c1d9e70" }
+  },
+  "objective": "Connect one product from the store to the catalogue page and to one submitted order.",
+  "why": "The reconciliation found no product or order code. One thin path through every layer shows the release path before each feature grows.",
+  "contributesTo": ["ac-browse-1", "ac-checkout-1"],
+  "scope": {
+    "include": ["one product record", "catalogue page with one product", "basket and order submit without payment", "deploy to production"],
+    "exclude": ["search", "payment provider", "product images"]
+  }
+}

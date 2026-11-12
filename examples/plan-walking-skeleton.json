@@ -1,0 +1,17 @@
+{
+  "specVersion": "0.1",
+  "id": "plan-walking-skeleton",
+  "revision": 1,
+  "project": { "id": "example-shop" },
+  "title": "Online shop",
+  "intent": "Customers find a product and pay for it online.",
+  "outcomes": [
+    { "id": "browse", "title": "Customers find a product in the catalogue." },
+    { "id": "checkout", "title": "Customers pay for the products in their basket." }
+  ],
+  "acceptanceCriteria": [
+    { "id": "ac-browse-1", "outcomeId": "browse", "statement": "The catalogue page lists the products from the product store." },
+    { "id": "ac-browse-2", "outcomeId": "browse", "statement": "A search returns matching products in under one second." },
+    { "id": "ac-checkout-1", "outcomeId": "checkout", "statement": "A customer can add a product to the basket and submit an order." }
+  ]
+}

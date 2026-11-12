@@ -151,16 +151,18 @@ orbit slice <record.json>
 Build an Execution Slice only after the Plan and Reconciliation records exist:
 
 ```sh
-orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--id <id>] [--output <file>] [--contributes <id,id>] [--include <item,item>] [--exclude <item,item>]
+orbit slice --plan <file> --reconciliation <file> --outcome <id> --objective <text> --why <text> [--outcomes <id,id>] [--id <id>] [--output <file>] [--contributes <id,id>] [--include <item,item>] [--exclude <item,item>]
 ```
 
-Required: `--plan`, `--reconciliation`, `--outcome`, `--objective`, `--why`. Optional: `--id`, `--output`, `--contributes`, `--include`, `--exclude`. When `--id` is omitted, the CLI generates an id that starts with `slice-<plan-id>-`.
+Required: `--plan`, `--reconciliation`, `--outcome`, `--objective`, `--why`. Optional: `--outcomes`, `--id`, `--output`, `--contributes`, `--include`, `--exclude`. When `--id` is omitted, the CLI generates an id that starts with `slice-<plan-id>-`.
 
-`--outcome` must be an outcome id on the Plan. `--contributes`, `--include`, and `--exclude` are comma-separated lists with no spaces. They map to `contributesTo`, `scope.include`, and `scope.exclude`. Omitted lists are empty. The command sets `basedOn.repositories` to `{}`. It does not copy snapshot commits. A non-empty `basedOn.repositories` object must use repository ids and commits from the Reconciliation's snapshot; add that object by editing the written JSON, then validate again. There is no flag for repository commits.
+`--outcome` must be an outcome id on the Plan. It is the primary outcome. Without `--outcomes`, every `--contributes` criterion must belong to it. `--contributes`, `--include`, and `--exclude` are comma-separated lists with no spaces. They map to `contributesTo`, `scope.include`, and `scope.exclude`. Omitted lists are empty. The command sets `basedOn.repositories` to `{}`. It does not copy snapshot commits. A non-empty `basedOn.repositories` object must use repository ids and commits from the Reconciliation's snapshot; add that object by editing the written JSON, then validate again. There is no flag for repository commits.
 
 ```sh
 orbit slice --plan orbit/plans/plan-<id>.json --reconciliation orbit/reconciliations/reconciliation-<id>.json --outcome <outcome-id> --objective "<bounded change>" --why "<why this change>" --output orbit/slices/slice-<id>.json
 ```
+
+Use `--outcomes` only when one bounded change must advance several outcomes, for example a walking skeleton. `--outcomes` is a comma-separated list of outcome ids. It must include the `--outcome` id and at least one other outcome id. Each listed outcome needs at least one `--contributes` criterion. The command writes `outcomeIds` and `specVersion` `0.2`. A cross-outcome slice is larger to review. Prefer a single-outcome slice. Read `docs/cross-outcome-slices.md` in the ORBIT repository for the rules.
 
 Then run `orbit validate --all --root orbit`. Do not run `orbit sync github` until this succeeds.
 

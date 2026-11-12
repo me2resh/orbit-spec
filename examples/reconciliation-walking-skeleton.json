@@ -1,0 +1,16 @@
+{
+  "specVersion": "0.1",
+  "id": "reconciliation-walking-skeleton",
+  "planId": "plan-walking-skeleton",
+  "planRevision": 1,
+  "projectSnapshotId": "snapshot-walking-skeleton",
+  "reconciledAt": "2026-11-12T09:05:00Z",
+  "observations": [
+    { "id": "obs-1", "text": "The repository has a deploy pipeline but no product or order code." }
+  ],
+  "criterionAssessments": [
+    { "criterionId": "ac-browse-1", "status": "not-verified", "evidence": [], "explanation": "No catalogue page exists." },
+    { "criterionId": "ac-browse-2", "status": "not-verified", "evidence": [], "explanation": "No search exists." },
+    { "criterionId": "ac-checkout-1", "status": "not-verified", "evidence": [], "explanation": "No basket or order code exists." }
+  ]
+}
